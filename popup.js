@@ -180,6 +180,7 @@ function render() {
     <main class="popup-shell">
       <section class="popup-card" aria-label="MX-Insight">
         <header class="popup-header">
+          <img src="/icons/icon-128.png" alt="" class="popup-logo" />
           <div>
             <div class="popup-eyebrow">MX-Insight</div>
             <h1>${escapeHtml(t("badge"))}</h1>

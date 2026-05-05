@@ -1711,29 +1711,29 @@ const ft=["正在分析主体","正在提取风格","正在生成提示词"],Le=
 
   :host {
     --mx-bg: #ffffff;
-    --mx-bg-soft: #f7f7f7;
-    --mx-text: #111111;
-    --mx-muted: #555555;
-    --mx-border: #d9d9d9;
-    --mx-hover: #efefef;
-    --mx-primary: #000000;
+    --mx-bg-soft: #f1f5f3;
+    --mx-text: #15201d;
+    --mx-muted: #5e6a66;
+    --mx-border: #cbd5d1;
+    --mx-hover: #e7efec;
+    --mx-primary: #256f62;
     --mx-primary-text: #ffffff;
-    --mx-shadow: 0 14px 34px rgba(0, 0, 0, 0.14);
-    --mx-danger: #b00020;
-    --mx-success: #0b6b3a;
+    --mx-shadow: 0 18px 44px rgba(28, 48, 43, 0.16);
+    --mx-danger: #b42318;
+    --mx-success: #16794c;
   }
 
   @media (prefers-color-scheme: dark) {
     :host {
-      --mx-bg: #000000;
-      --mx-bg-soft: #101010;
-      --mx-text: #f7f7f7;
-      --mx-muted: #a8a8a8;
-      --mx-border: #303030;
-      --mx-hover: #1c1c1c;
-      --mx-primary: #ffffff;
-      --mx-primary-text: #000000;
-      --mx-shadow: 0 16px 42px rgba(0, 0, 0, 0.56);
+      --mx-bg: #111715;
+      --mx-bg-soft: #151d1a;
+      --mx-text: #f1f6f3;
+      --mx-muted: #a0aaa6;
+      --mx-border: #2d3834;
+      --mx-hover: #1c2622;
+      --mx-primary: #6dc7b7;
+      --mx-primary-text: #0b0f0e;
+      --mx-shadow: 0 18px 50px rgba(0, 0, 0, 0.48);
       --mx-danger: #ff6b6b;
       --mx-success: #68d391;
     }

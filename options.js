@@ -21,7 +21,7 @@ const LANGUAGES = [
 
 const TEXT = {
   en: {
-    console: "Console",
+    console: "System settings",
     lead: "Configure image prompt analysis, choose interface language, and review local records.",
     welcomeTitle: "Choose how MX-Insight should connect",
     welcomeCopy: "A local-first setup keeps your API credentials and analysis records in this browser.",
@@ -59,7 +59,7 @@ const TEXT = {
     source: "Source",
   },
   "zh-CN": {
-    console: "后台",
+    console: "系统设置",
     lead: "配置图片提示词分析、界面语言，并查看本地保存记录。",
     welcomeTitle: "选择 MX-Insight 的连接方式",
     welcomeCopy: "本地优先设置会把 API 凭据和分析记录保存在当前浏览器。",
@@ -97,7 +97,7 @@ const TEXT = {
     source: "来源",
   },
   "zh-TW": {
-    console: "後台",
+    console: "系統設定",
     lead: "設定圖片提示詞分析、介面語言，並查看本地保存記錄。",
     welcomeTitle: "選擇 MX-Insight 的連線方式",
     welcomeCopy: "本地優先設定會把 API 憑證和分析記錄保存在目前瀏覽器。",
@@ -135,7 +135,7 @@ const TEXT = {
     source: "來源",
   },
   ja: {
-    console: "管理画面",
+    console: "システム設定",
     lead: "画像プロンプト分析、表示言語、ローカル保存履歴を管理します。",
     welcomeTitle: "MX-Insight の接続方法を選択",
     welcomeCopy: "ローカル優先の設定では、API 認証情報と分析履歴をこのブラウザに保存します。",
@@ -259,10 +259,15 @@ async function saveSettingsFromForm(testAfterSave = false) {
       if (!response?.ok) throw new Error(response?.error || "Connection failed.");
       message = t("connected");
       messageTone = "success";
+      modalOpen = false;
+      welcomeMode = false;
+      if (location.hash) history.replaceState(null, "", "options.html");
     } else {
       message = t("saved");
       messageTone = "success";
       modalOpen = false;
+      welcomeMode = false;
+      if (location.hash) history.replaceState(null, "", "options.html");
     }
   } catch (error) {
     message = error instanceof Error ? error.message : String(error);
@@ -318,7 +323,7 @@ function renderWelcome() {
         <p>${escapeHtml(t("welcomeCopy"))}</p>
       </div>
       <div class="choice-grid">
-        <button type="button" class="choice-card is-disabled" disabled data-tooltip="${escapeHtml(t("unavailableTip"))}" title="${escapeHtml(t("unavailableTip"))}">
+        <button type="button" class="choice-card is-disabled" aria-disabled="true" data-tooltip="${escapeHtml(t("unavailableTip"))}" title="${escapeHtml(t("unavailableTip"))}">
           <span class="choice-kicker">${escapeHtml(t("account"))}</span>
           <strong>${escapeHtml(t("smvapi"))}</strong>
           <small>${escapeHtml(t("unavailable"))}</small>
@@ -407,11 +412,25 @@ function renderModal() {
 
 function render() {
   const configured = settings.baseUrl && settings.model;
+  if (welcomeMode) {
+    root.innerHTML = `
+      <main class="install-shell">
+        ${renderWelcome()}
+        ${renderModal()}
+      </main>
+    `;
+    bindEvents();
+    return;
+  }
+
   root.innerHTML = `
     <main class="page-shell">
       <aside class="side-rail">
         <div>
-          <p class="brand-mark">MX</p>
+          <div class="brand-lockup">
+            <img src="/icons/icon-128.png" alt="" class="brand-logo" />
+            <p class="brand-mark">MX</p>
+          </div>
           <h1>MX-Insight</h1>
           <p>${escapeHtml(t("lead"))}</p>
         </div>
@@ -420,6 +439,8 @@ function render() {
 
       <section class="workspace">
         ${renderWelcome()}
+
+        ${renderHistory()}
 
         <section class="hero-panel">
           <div>
@@ -460,12 +481,15 @@ function render() {
           </article>
         </section>
 
-        ${renderHistory()}
       </section>
       ${renderModal()}
     </main>
   `;
 
+  bindEvents();
+}
+
+function bindEvents() {
   document.getElementById("language-select")?.addEventListener("change", (event) => setLanguage(event.target.value));
   document.getElementById("status-toggle")?.addEventListener("click", () => setEnabled(!settings.enabled));
   document.getElementById("edit-api")?.addEventListener("click", () => {
@@ -475,8 +499,7 @@ function render() {
   });
   document.getElementById("welcome-custom-api")?.addEventListener("click", () => {
     modalOpen = true;
-    welcomeMode = false;
-    history.replaceState(null, "", "options.html");
+    message = "";
     render();
   });
   document.getElementById("close-modal")?.addEventListener("click", () => {

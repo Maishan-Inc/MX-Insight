@@ -603,7 +603,7 @@ function updateContextMenu(enabled) {
       {
         id: MENU_ID,
         title: "分析图片提示词",
-        contexts: ["image", "page"],
+        contexts: ["image"],
       },
       () => {
         chrome.runtime.lastError;
