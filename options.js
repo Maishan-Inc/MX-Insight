@@ -12,11 +12,11 @@ const DEFAULTS = {
 };
 
 const LANGUAGES = [
-  { value: "auto", label: "Auto" },
-  { value: "en", label: "English" },
-  { value: "zh-CN", label: "简体中文" },
-  { value: "zh-TW", label: "繁體中文" },
-  { value: "ja", label: "日本語" },
+  { value: "auto", labels: { en: "Auto", "zh-CN": "自动", "zh-TW": "自動", ja: "自動" } },
+  { value: "en", labels: { en: "English", "zh-CN": "英语", "zh-TW": "英文", ja: "英語" } },
+  { value: "zh-CN", labels: { en: "Simplified Chinese", "zh-CN": "简体中文", "zh-TW": "簡體中文", ja: "簡体字中国語" } },
+  { value: "zh-TW", labels: { en: "Traditional Chinese", "zh-CN": "繁体中文", "zh-TW": "繁體中文", ja: "繁体字中国語" } },
+  { value: "ja", labels: { en: "Japanese", "zh-CN": "日语", "zh-TW": "日文", ja: "日本語" } },
 ];
 
 const TEXT = {
@@ -48,6 +48,9 @@ const TEXT = {
     baseUrl: "Base URL",
     apiKey: "API Key",
     model: "Model",
+    baseUrlPlaceholder: "https://api.openai.com/v1",
+    apiKeyPlaceholder: "sk-... / AIza...",
+    modelPlaceholder: "gpt-4o-mini / gemini-2.5-flash / qwen-vl-max",
     cancel: "Cancel",
     saved: "Settings saved.",
     connected: "Connection is available.",
@@ -62,12 +65,12 @@ const TEXT = {
     console: "系统设置",
     lead: "配置图片提示词分析、界面语言，并查看本地保存记录。",
     welcomeTitle: "选择 MX-Insight 的连接方式",
-    welcomeCopy: "本地优先设置会把 API 凭据和分析记录保存在当前浏览器。",
+    welcomeCopy: "本地优先设置会把接口凭据和分析记录保存在当前浏览器。",
     smvapi: "使用 SMVAPI 账户登录",
     unavailable: "暂未开放",
     unavailableTip: "暂未开放",
-    customApi: "自定义 API",
-    customApiCopy: "接入 OpenAI 兼容接口、Gemini 接口，或其他支持图片理解的 API。",
+    customApi: "自定义接口",
+    customApiCopy: "接入兼容接口、图片理解接口，或其他支持图片分析的接口。",
     openCustomApi: "配置",
     connection: "连接",
     account: "账户模式",
@@ -76,21 +79,24 @@ const TEXT = {
     status: "插件状态",
     enabled: "开启",
     disabled: "暂停",
-    apiSummary: "自定义 API",
+    apiSummary: "自定义接口",
     apiMissing: "未配置",
     edit: "编辑",
     test: "测试连接",
     save: "保存设置",
     saving: "保存中...",
     testing: "测试中...",
-    baseUrl: "Base URL",
-    apiKey: "API Key",
-    model: "Model",
+    baseUrl: "接口地址",
+    apiKey: "接口密钥",
+    model: "模型名称",
+    baseUrlPlaceholder: "请输入接口地址",
+    apiKeyPlaceholder: "请输入接口密钥",
+    modelPlaceholder: "请输入支持图片分析的模型名称",
     cancel: "取消",
     saved: "设置已保存。",
     connected: "接口已连通。",
     historyTitle: "本地保存记录",
-    historyCopy: "记录保存在当前浏览器的 chrome.storage.local 中。",
+    historyCopy: "记录保存在当前浏览器本地存储中。",
     emptyHistory: "还没有保存记录。",
     clearHistory: "清空记录",
     delete: "删除",
@@ -100,12 +106,12 @@ const TEXT = {
     console: "系統設定",
     lead: "設定圖片提示詞分析、介面語言，並查看本地保存記錄。",
     welcomeTitle: "選擇 MX-Insight 的連線方式",
-    welcomeCopy: "本地優先設定會把 API 憑證和分析記錄保存在目前瀏覽器。",
+    welcomeCopy: "本地優先設定會把介面憑證和分析記錄保存在目前瀏覽器。",
     smvapi: "使用 SMVAPI 帳戶登入",
     unavailable: "暫未開放",
     unavailableTip: "暫未開放",
-    customApi: "自訂 API",
-    customApiCopy: "接入 OpenAI 相容介面、Gemini 介面，或其他支援圖片理解的 API。",
+    customApi: "自訂介面",
+    customApiCopy: "接入相容介面、圖片理解介面，或其他支援圖片分析的介面。",
     openCustomApi: "設定",
     connection: "連線",
     account: "帳戶模式",
@@ -114,21 +120,24 @@ const TEXT = {
     status: "插件狀態",
     enabled: "開啟",
     disabled: "暫停",
-    apiSummary: "自訂 API",
+    apiSummary: "自訂介面",
     apiMissing: "未設定",
     edit: "編輯",
     test: "測試連線",
     save: "保存設定",
     saving: "保存中...",
     testing: "測試中...",
-    baseUrl: "Base URL",
-    apiKey: "API Key",
-    model: "Model",
+    baseUrl: "介面位址",
+    apiKey: "介面密鑰",
+    model: "模型名稱",
+    baseUrlPlaceholder: "請輸入介面位址",
+    apiKeyPlaceholder: "請輸入介面密鑰",
+    modelPlaceholder: "請輸入支援圖片分析的模型名稱",
     cancel: "取消",
     saved: "設定已保存。",
     connected: "介面已連通。",
     historyTitle: "本地保存記錄",
-    historyCopy: "記錄保存在目前瀏覽器的 chrome.storage.local 中。",
+    historyCopy: "記錄保存在目前瀏覽器本地儲存中。",
     emptyHistory: "還沒有保存記錄。",
     clearHistory: "清空記錄",
     delete: "刪除",
@@ -162,6 +171,9 @@ const TEXT = {
     baseUrl: "Base URL",
     apiKey: "API Key",
     model: "Model",
+    baseUrlPlaceholder: "https://api.openai.com/v1",
+    apiKeyPlaceholder: "sk-... / AIza...",
+    modelPlaceholder: "gpt-4o-mini / gemini-2.5-flash / qwen-vl-max",
     cancel: "キャンセル",
     saved: "設定を保存しました。",
     connected: "接続できます。",
@@ -305,8 +317,9 @@ async function clearHistory() {
 }
 
 function renderLanguageOptions() {
+  const lang = detectLanguage();
   return LANGUAGES.map((item) => (
-    `<option value="${item.value}" ${settings.uiLanguage === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+    `<option value="${item.value}" ${settings.uiLanguage === item.value ? "selected" : ""}>${escapeHtml(item.labels[lang] || item.labels.en)}</option>`
   )).join("");
 }
 
@@ -318,7 +331,7 @@ function renderWelcome() {
         <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
       <div class="welcome-copy">
-        <p class="eyebrow">MX-Insight</p>
+        <img src="/icons/icon-128.png" alt="" class="welcome-logo" />
         <h1>${escapeHtml(t("welcomeTitle"))}</h1>
         <p>${escapeHtml(t("welcomeCopy"))}</p>
       </div>
@@ -390,15 +403,15 @@ function renderModal() {
         </header>
         <label class="field field-wide">
           <span>${escapeHtml(t("baseUrl"))}</span>
-          <input id="base-url" type="url" spellcheck="false" value="${escapeHtml(settings.baseUrl)}" placeholder="https://api.openai.com/v1" />
+          <input id="base-url" type="url" spellcheck="false" value="${escapeHtml(settings.baseUrl)}" placeholder="${escapeHtml(t("baseUrlPlaceholder"))}" />
         </label>
         <label class="field">
           <span>${escapeHtml(t("apiKey"))}</span>
-          <input id="api-key" type="password" spellcheck="false" value="${escapeHtml(settings.apiKey)}" placeholder="sk-... / AIza..." />
+          <input id="api-key" type="password" spellcheck="false" value="${escapeHtml(settings.apiKey)}" placeholder="${escapeHtml(t("apiKeyPlaceholder"))}" />
         </label>
         <label class="field">
           <span>${escapeHtml(t("model"))}</span>
-          <input id="model" type="text" spellcheck="false" value="${escapeHtml(settings.model)}" placeholder="gpt-4o-mini / gemini-2.5-flash / qwen-vl-max" />
+          <input id="model" type="text" spellcheck="false" value="${escapeHtml(settings.model)}" placeholder="${escapeHtml(t("modelPlaceholder"))}" />
         </label>
         ${message ? `<p class="message ${messageTone === "error" ? "message-error" : "message-success"}">${escapeHtml(message)}</p>` : ""}
         <div class="modal-actions">
@@ -429,9 +442,8 @@ function render() {
         <div>
           <div class="brand-lockup">
             <img src="/icons/icon-128.png" alt="" class="brand-logo" />
-            <p class="brand-mark">MX</p>
           </div>
-          <h1>MX-Insight</h1>
+          <h1 class="sr-only">MX-Insight</h1>
           <p>${escapeHtml(t("lead"))}</p>
         </div>
         <footer>Copyright &copy; Maishan Inc.</footer>
@@ -444,7 +456,7 @@ function render() {
 
         <section class="hero-panel">
           <div>
-            <p class="eyebrow">MX-Insight</p>
+            <img src="/icons/icon-128.png" alt="" class="section-logo" />
             <h2>${escapeHtml(t("console"))}</h2>
             <p>${escapeHtml(t("lead"))}</p>
           </div>

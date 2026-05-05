@@ -10,11 +10,11 @@ const DEFAULTS = {
 };
 
 const LANGUAGES = [
-  { value: "auto", label: "Auto" },
-  { value: "en", label: "English" },
-  { value: "zh-CN", label: "简体中文" },
-  { value: "zh-TW", label: "繁體中文" },
-  { value: "ja", label: "日本語" },
+  { value: "auto", labels: { en: "Auto", "zh-CN": "自动", "zh-TW": "自動", ja: "自動" } },
+  { value: "en", labels: { en: "English", "zh-CN": "英语", "zh-TW": "英文", ja: "英語" } },
+  { value: "zh-CN", labels: { en: "Simplified Chinese", "zh-CN": "简体中文", "zh-TW": "簡體中文", ja: "簡体字中国語" } },
+  { value: "zh-TW", labels: { en: "Traditional Chinese", "zh-CN": "繁体中文", "zh-TW": "繁體中文", ja: "繁体字中国語" } },
+  { value: "ja", labels: { en: "Japanese", "zh-CN": "日语", "zh-TW": "日文", ja: "日本語" } },
 ];
 
 const TEXT = {
@@ -173,7 +173,7 @@ function openSettings() {
 
 function render() {
   const langOptions = LANGUAGES.map((item) => (
-    `<option value="${item.value}" ${settings.uiLanguage === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+    `<option value="${item.value}" ${settings.uiLanguage === item.value ? "selected" : ""}>${escapeHtml(item.labels[detectLanguage()] || item.labels.en)}</option>`
   )).join("");
 
   root.innerHTML = `
@@ -182,7 +182,7 @@ function render() {
         <header class="popup-header">
           <img src="/icons/icon-128.png" alt="" class="popup-logo" />
           <div>
-            <div class="popup-eyebrow">MX-Insight</div>
+            <div class="popup-eyebrow">${escapeHtml(t("settings"))}</div>
             <h1>${escapeHtml(t("badge"))}</h1>
           </div>
           <span class="status-pill${settings.enabled ? " is-on" : ""}">${escapeHtml(settings.enabled ? t("on") : t("off"))}</span>

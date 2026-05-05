@@ -319,8 +319,8 @@ function parseResponse(value) {
 }
 
 function validateConfig(config) {
-  if (!config.baseUrl.trim()) throw new Error("请先在设置页填写 Base URL。");
-  if (!config.apiKey.trim()) throw new Error("请先在设置页填写 API Key。");
+  if (!config.baseUrl.trim()) throw new Error("请先在设置页填写接口地址。");
+  if (!config.apiKey.trim()) throw new Error("请先在设置页填写接口密钥。");
   if (!config.model.trim()) throw new Error("请先在设置页填写支持图片分析的模型名。");
 }
 
@@ -329,7 +329,7 @@ function requestError(kind, config, error) {
   const detail = error instanceof Error && error.message ? error.message : "unknown error";
   return isDashScopeUrl(config.baseUrl)
     ? new Error(
-        `${label}发起失败：当前没有拿到 DashScope 的 HTTP 响应。请优先检查 1. Model 是否写成全小写，例如 qwen3.5-plus 或 qwen-vl-max；2. API Key 所在地域与 Base URL 是否一致，中国内地用 dashscope.aliyuncs.com，弗吉尼亚用 dashscope-us.aliyuncs.com，新加坡用 dashscope-intl.aliyuncs.com；3. 当前网络、代理或证书是否拦截了扩展对 DashScope 的 HTTPS 请求。原始错误：${detail}`,
+        `${label}发起失败：当前没有拿到 DashScope 的 HTTP 响应。请优先检查 1. 模型名称是否写成全小写，例如 qwen3.5-plus 或 qwen-vl-max；2. 接口密钥所在地域与接口地址是否一致，中国内地用 dashscope.aliyuncs.com，弗吉尼亚用 dashscope-us.aliyuncs.com，新加坡用 dashscope-intl.aliyuncs.com；3. 当前网络、代理或证书是否拦截了扩展对 DashScope 的 HTTPS 请求。原始错误：${detail}`,
       )
     : new Error(`${label}发起失败：${detail}`);
 }
@@ -602,7 +602,7 @@ function updateContextMenu(enabled) {
     chrome.contextMenus.create(
       {
         id: MENU_ID,
-        title: "分析图片提示词",
+        title: "使用MX-Insight分析此图片提示词",
         contexts: ["image"],
       },
       () => {
