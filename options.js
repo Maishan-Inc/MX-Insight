@@ -192,6 +192,7 @@ let historyEntries = [];
 let modalOpen = false;
 let welcomeMode = location.hash === "#welcome";
 let welcomeReady = !welcomeMode;
+let activeSection = "history";
 let message = "";
 let messageTone = "";
 let saving = false;
@@ -389,6 +390,85 @@ function renderHistory() {
   `;
 }
 
+function renderSidebar() {
+  return `
+    <aside class="side-rail">
+      <div class="brand-block">
+        <img src="/icons/icon-128.png" alt="" class="brand-logo" />
+        <div class="brand-copy">
+          <h1>MX-Insight</h1>
+          <p>图片提示词分析</p>
+        </div>
+      </div>
+      <nav class="side-nav" aria-label="后台导航">
+        <button type="button" class="side-nav-item${activeSection === "history" ? " is-active" : ""}" data-section="history">
+          <span class="side-nav-title">保存记录</span>
+          <span class="side-nav-subtitle">查看本地分析记录</span>
+        </button>
+        <button type="button" class="side-nav-item${activeSection === "settings" ? " is-active" : ""}" data-section="settings">
+          <span class="side-nav-title">设置</span>
+          <span class="side-nav-subtitle">接口、语言和插件</span>
+        </button>
+      </nav>
+      <footer>Copyright © Maishan Inc.</footer>
+    </aside>
+  `;
+}
+
+function renderHistoryView() {
+  return `
+    <section class="view-stack">
+      ${renderHistory()}
+    </section>
+  `;
+}
+
+function renderSettingsView() {
+  const configured = settings.baseUrl && settings.model;
+  return `
+    <section class="view-stack">
+      <section class="hero-panel">
+        <div>
+          <img src="/icons/icon-128.png" alt="" class="section-logo" />
+          <h2>设置</h2>
+          <p>接口、语言和插件开关。</p>
+        </div>
+        <div class="control-row">
+          <label class="compact-field">
+            <span>${escapeHtml(t("language"))}</span>
+            <select id="language-select">${renderLanguageOptions()}</select>
+          </label>
+          <label class="switch-field">
+            <span>${escapeHtml(t("status"))}</span>
+            <button type="button" class="toggle-chip${settings.enabled ? " is-on" : ""}" id="status-toggle">
+              ${escapeHtml(settings.enabled ? t("enabled") : t("disabled"))}
+            </button>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel-grid">
+        <article class="panel-section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">${escapeHtml(t("apiSummary"))}</p>
+              <h2>${escapeHtml(configured ? settings.model : t("apiMissing"))}</h2>
+              <p>${escapeHtml(configured ? settings.baseUrl : t("customApiCopy"))}</p>
+            </div>
+            <button type="button" class="primary-action" id="edit-api">${escapeHtml(t("edit"))}</button>
+          </div>
+        </article>
+
+        <article class="panel-section disabled-panel" title="${escapeHtml(t("unavailableTip"))}">
+          <p class="eyebrow">${escapeHtml(t("account"))}</p>
+          <h2>${escapeHtml(t("smvapi"))}</h2>
+          <p>${escapeHtml(t("unavailable"))}</p>
+        </article>
+      </section>
+    </section>
+  `;
+}
+
 function renderModal() {
   if (!modalOpen) return "";
   return `
@@ -424,7 +504,6 @@ function renderModal() {
 }
 
 function render() {
-  const configured = settings.baseUrl && settings.model;
   if (welcomeMode) {
     root.innerHTML = `
       <main class="install-shell">
@@ -438,61 +517,10 @@ function render() {
 
   root.innerHTML = `
     <main class="page-shell">
-      <aside class="side-rail">
-        <div>
-          <div class="brand-lockup">
-            <img src="/icons/icon-128.png" alt="" class="brand-logo" />
-          </div>
-          <h1 class="sr-only">MX-Insight</h1>
-          <p>${escapeHtml(t("lead"))}</p>
-        </div>
-        <footer>Copyright &copy; Maishan Inc.</footer>
-      </aside>
+      ${renderSidebar()}
 
       <section class="workspace">
-        ${renderWelcome()}
-
-        ${renderHistory()}
-
-        <section class="hero-panel">
-          <div>
-            <img src="/icons/icon-128.png" alt="" class="section-logo" />
-            <h2>${escapeHtml(t("console"))}</h2>
-            <p>${escapeHtml(t("lead"))}</p>
-          </div>
-          <div class="control-row">
-            <label class="compact-field">
-              <span>${escapeHtml(t("language"))}</span>
-              <select id="language-select">${renderLanguageOptions()}</select>
-            </label>
-            <label class="switch-field">
-              <span>${escapeHtml(t("status"))}</span>
-              <button type="button" class="toggle-chip${settings.enabled ? " is-on" : ""}" id="status-toggle">
-                ${escapeHtml(settings.enabled ? t("enabled") : t("disabled"))}
-              </button>
-            </label>
-          </div>
-        </section>
-
-        <section class="panel-grid">
-          <article class="panel-section">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">${escapeHtml(t("apiSummary"))}</p>
-                <h2>${escapeHtml(configured ? settings.model : t("apiMissing"))}</h2>
-                <p>${escapeHtml(configured ? settings.baseUrl : t("customApiCopy"))}</p>
-              </div>
-              <button type="button" class="primary-action" id="edit-api">${escapeHtml(t("edit"))}</button>
-            </div>
-          </article>
-
-          <article class="panel-section disabled-panel" title="${escapeHtml(t("unavailableTip"))}">
-            <p class="eyebrow">${escapeHtml(t("account"))}</p>
-            <h2>${escapeHtml(t("smvapi"))}</h2>
-            <p>${escapeHtml(t("unavailable"))}</p>
-          </article>
-        </section>
-
+        ${activeSection === "history" ? renderHistoryView() : renderSettingsView()}
       </section>
       ${renderModal()}
     </main>
@@ -525,6 +553,12 @@ function bindEvents() {
   });
   document.getElementById("test-connection")?.addEventListener("click", () => saveSettingsFromForm(true));
   document.getElementById("clear-history")?.addEventListener("click", clearHistory);
+  document.querySelectorAll("[data-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeSection = button.dataset.section === "settings" ? "settings" : "history";
+      render();
+    });
+  });
   document.querySelectorAll("[data-delete-record]").forEach((button) => {
     button.addEventListener("click", () => deleteRecord(button.dataset.deleteRecord));
   });

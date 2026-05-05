@@ -99,6 +99,15 @@ a{color:inherit}
 .install-shell{display:grid;place-items:center;padding:24px}
 .install-shell .welcome-stage{width:min(860px,100%);min-height:min(520px,calc(100vh - 48px));align-content:center}
 .side-rail{padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:20px}
+.brand-block{display:flex;align-items:center;gap:12px}
+.brand-copy{display:grid;gap:3px;min-width:0}
+.brand-copy h1{margin:0;font-size:18px;line-height:1.1}
+.brand-copy p{margin:0;font-size:12px;color:var(--muted);line-height:1.3}
+.side-nav{display:grid;gap:8px;margin-top:22px}
+.side-nav-item{width:100%;display:grid;gap:4px;text-align:left;border:1px solid transparent;background:transparent;color:var(--fg);padding:12px;border-radius:8px;cursor:pointer}
+.side-nav-item:hover,.side-nav-item.is-active{background:var(--soft);border-color:var(--line)}
+.side-nav-title{font-weight:650;font-size:14px}
+.side-nav-subtitle{font-size:12px;color:var(--muted)}
 .brand-lockup{display:flex;align-items:center;gap:10px}
 .brand-logo{width:52px;height:52px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:var(--soft)}
 .welcome-logo,.section-logo{width:48px;height:48px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:var(--soft)}
@@ -160,7 +169,30 @@ a{color:inherit}
 .icon-button:hover,.secondary-action:hover,.primary-action:hover,.text-button:hover,.toggle-row:hover,.choice-card:hover{transform:translateY(-1px)}
 .modal-card .message-success{color:var(--fg)}
 .modal-card .message-error{color:var(--danger)}
+.message-success{color:var(--fg)}
+.message-error{color:var(--danger)}
 .modal-card .message{grid-column:1/-1}
+.popup-modal-layer{position:fixed;inset:0;z-index:20}
+.upload-modal{width:min(420px,calc(100vw - 28px))}
+.upload-dropzone{
+  width:100%;
+  min-height:170px;
+  display:grid;
+  place-items:center;
+  gap:8px;
+  padding:22px;
+  border:1px dashed var(--line);
+  background:var(--soft);
+  color:var(--fg);
+  border-radius:10px;
+  text-align:center;
+  cursor:pointer;
+}
+.upload-dropzone:hover,.upload-dropzone.is-dragover{background:var(--surface);border-style:solid}
+.upload-dropzone:disabled{opacity:.6;cursor:progress}
+.upload-dropzone strong{font-size:14px;line-height:1.4}
+.upload-dropzone small{font-size:12px;color:var(--muted);line-height:1.4}
+.upload-icon{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:24px;line-height:1}
 [data-tooltip]{position:relative}
 [data-tooltip]:hover::after{
   content:attr(data-tooltip);

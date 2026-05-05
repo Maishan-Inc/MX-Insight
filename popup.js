@@ -27,6 +27,13 @@ const TEXT = {
     disabledCopy: "Hover actions, right-click analysis, and panel opening are paused.",
     openPanel: "Open panel",
     opening: "Opening...",
+    uploadImage: "Upload image",
+    uploadTitle: "Upload or drag an image",
+    uploadCopy: "Analyze the image and save the prompt record locally.",
+    uploadHint: "PNG, JPEG, GIF, WebP, AVIF, or BMP",
+    analyzing: "Analyzing...",
+    uploadSaved: "Saved to local records.",
+    viewRecords: "View records",
     settings: "Console",
     language: "Language",
     enabledMsg: "MX-Insight is enabled.",
@@ -43,6 +50,13 @@ const TEXT = {
     disabledCopy: "悬浮按钮、右键分析和面板打开已暂停。",
     openPanel: "打开面板",
     opening: "打开中...",
+    uploadImage: "上传图片分析",
+    uploadTitle: "上传或拖动图片",
+    uploadCopy: "分析图片提示词，并保存到本地记录。",
+    uploadHint: "支持 PNG、JPEG、GIF、WebP、AVIF、BMP",
+    analyzing: "分析中...",
+    uploadSaved: "已保存到后台保存记录。",
+    viewRecords: "查看保存记录",
     settings: "后台",
     language: "语言",
     enabledMsg: "MX-Insight 已开启。",
@@ -59,6 +73,13 @@ const TEXT = {
     disabledCopy: "懸浮按鈕、右鍵分析和面板開啟已暫停。",
     openPanel: "開啟面板",
     opening: "開啟中...",
+    uploadImage: "上傳圖片分析",
+    uploadTitle: "上傳或拖動圖片",
+    uploadCopy: "分析圖片提示詞，並保存到本地記錄。",
+    uploadHint: "支援 PNG、JPEG、GIF、WebP、AVIF、BMP",
+    analyzing: "分析中...",
+    uploadSaved: "已保存到後台保存記錄。",
+    viewRecords: "查看保存記錄",
     settings: "後台",
     language: "語言",
     enabledMsg: "MX-Insight 已開啟。",
@@ -75,6 +96,13 @@ const TEXT = {
     disabledCopy: "ホバー操作、右クリック分析、パネル起動は停止中です。",
     openPanel: "パネルを開く",
     opening: "起動中...",
+    uploadImage: "画像をアップロード",
+    uploadTitle: "画像をアップロードまたはドラッグ",
+    uploadCopy: "画像プロンプトを分析し、ローカル履歴に保存します。",
+    uploadHint: "PNG、JPEG、GIF、WebP、AVIF、BMP 対応",
+    analyzing: "分析中...",
+    uploadSaved: "ローカル履歴に保存しました。",
+    viewRecords: "履歴を見る",
     settings: "管理画面",
     language: "言語",
     enabledMsg: "MX-Insight は有効です。",
@@ -90,6 +118,10 @@ let ready = false;
 let busy = false;
 let opening = false;
 let message = "";
+let uploadOpen = false;
+let uploadBusy = false;
+let uploadMessage = "";
+let uploadTone = "";
 
 function detectLanguage(value = settings.uiLanguage) {
   if (value && value !== "auto") return TEXT[value] ? value : "en";
@@ -143,19 +175,85 @@ async function setEnabled() {
   }
 }
 
-async function openPanel() {
-  if (!settings.enabled || opening) return;
-  opening = true;
+function openUploadModal() {
+  if (!settings.enabled || uploadBusy) return;
+  uploadOpen = true;
+  uploadMessage = "";
+  uploadTone = "";
+  render();
+}
+
+function closeUploadModal() {
+  if (uploadBusy) return;
+  uploadOpen = false;
+  uploadMessage = "";
+  uploadTone = "";
+  render();
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("读取图片失败。"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function fileToTarget(file) {
+  if (!file || !file.type.startsWith("image/")) throw new Error("请选择图片文件。");
+  let bitmap = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const maxSide = 1800;
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("无法创建图片处理上下文。");
+    context.drawImage(bitmap, 0, 0, width, height);
+    return {
+      src: canvas.toDataURL("image/png"),
+      alt: file.name || "uploaded image",
+      pageUrl: "#",
+      naturalWidth: width,
+      naturalHeight: height,
+    };
+  } catch {
+    const src = await readFileAsDataUrl(file);
+    return {
+      src,
+      alt: file.name || "uploaded image",
+      pageUrl: "#",
+      naturalWidth: void 0,
+      naturalHeight: void 0,
+    };
+  } finally {
+    bitmap?.close?.();
+  }
+}
+
+async function analyzeUploadedFile(file) {
+  if (uploadBusy) return;
+  uploadBusy = true;
+  uploadMessage = "";
+  uploadTone = "";
   message = "";
   render();
   try {
-    const response = await chrome.runtime.sendMessage({ type: "OPEN_ACTIVE_PANEL" });
+    const target = await fileToTarget(file);
+    const response = await chrome.runtime.sendMessage({ type: "ANALYZE_UPLOADED_IMAGE", payload: { target } });
     if (!response?.ok) throw new Error(response?.error || t("panelError"));
-    window.close();
+    uploadMessage = t("uploadSaved");
+    uploadTone = "success";
   } catch (error) {
-    message = error instanceof Error ? error.message : t("panelError");
+    uploadMessage = error instanceof Error ? error.message : t("panelError");
+    uploadTone = "error";
   } finally {
-    opening = false;
+    uploadBusy = false;
     render();
   }
 }
@@ -169,6 +267,33 @@ async function saveLanguage(value) {
 function openSettings() {
   chrome.runtime.openOptionsPage();
   window.close();
+}
+
+function renderUploadModal() {
+  if (!uploadOpen) return "";
+  return `
+    <div class="modal-layer popup-modal-layer" role="dialog" aria-modal="true" aria-label="${escapeHtml(t("uploadTitle"))}">
+      <section class="modal-card upload-modal">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">${escapeHtml(t("uploadImage"))}</p>
+            <h2>${escapeHtml(t("uploadTitle"))}</h2>
+          </div>
+          <button type="button" class="icon-button" id="close-upload" aria-label="关闭">×</button>
+        </header>
+        <button type="button" class="upload-dropzone" id="upload-dropzone" ${uploadBusy ? "disabled" : ""}>
+          <span class="upload-icon">+</span>
+          <strong>${escapeHtml(uploadBusy ? t("analyzing") : t("uploadCopy"))}</strong>
+          <small>${escapeHtml(t("uploadHint"))}</small>
+        </button>
+        <input id="upload-input" type="file" accept="image/*" hidden />
+        ${uploadMessage ? `<p class="popup-message ${uploadTone === "error" ? "message-error" : "message-success"}">${escapeHtml(uploadMessage)}</p>` : ""}
+        <div class="popup-actions">
+          <button type="button" class="secondary-action" id="view-records">${escapeHtml(t("viewRecords"))}</button>
+        </div>
+      </section>
+    </div>
+  `;
 }
 
 function render() {
@@ -203,7 +328,7 @@ function render() {
 
         <div class="popup-actions">
           <button type="button" class="primary-action" id="open-panel" ${!settings.enabled || opening ? "disabled" : ""}>
-            ${escapeHtml(opening ? t("opening") : t("openPanel"))}
+            ${escapeHtml(opening ? t("opening") : t("uploadImage"))}
           </button>
           <button type="button" class="secondary-action" id="open-settings">${escapeHtml(t("settings"))}</button>
         </div>
@@ -211,12 +336,35 @@ function render() {
         ${message ? `<p class="popup-message">${escapeHtml(message)}</p>` : ""}
         <footer class="copyright">Copyright &copy; Maishan Inc.</footer>
       </section>
+      ${renderUploadModal()}
     </main>
   `;
 
   document.getElementById("toggle")?.addEventListener("click", setEnabled);
-  document.getElementById("open-panel")?.addEventListener("click", openPanel);
+  document.getElementById("open-panel")?.addEventListener("click", openUploadModal);
   document.getElementById("open-settings")?.addEventListener("click", openSettings);
+  document.getElementById("close-upload")?.addEventListener("click", closeUploadModal);
+  document.getElementById("view-records")?.addEventListener("click", openSettings);
+  const uploadInput = document.getElementById("upload-input");
+  const dropzone = document.getElementById("upload-dropzone");
+  dropzone?.addEventListener("click", () => uploadInput?.click());
+  uploadInput?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) analyzeUploadedFile(file);
+  });
+  dropzone?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropzone.classList.add("is-dragover");
+  });
+  dropzone?.addEventListener("dragleave", () => {
+    dropzone.classList.remove("is-dragover");
+  });
+  dropzone?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dropzone.classList.remove("is-dragover");
+    const file = event.dataTransfer?.files?.[0];
+    if (file) analyzeUploadedFile(file);
+  });
   document.getElementById("language-select")?.addEventListener("change", (event) => {
     saveLanguage(event.target.value);
   });

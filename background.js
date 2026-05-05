@@ -1,6 +1,8 @@
 const MENU_ID = "mx-insight-analyze-image";
 const OFF_BADGE = "OFF";
 const SETTINGS_KEY = "enabled";
+const HISTORY_KEY = "historyEntries";
+const SNAPSHOT_KEY = "latestAnalysisSnapshot";
 
 const GENERATOR_SITES = {
   jimeng: "https://jimeng.jianying.com/",
@@ -334,13 +336,7 @@ function requestError(kind, config, error) {
     : new Error(`${label}发起失败：${detail}`);
 }
 
-function imageMimeFromName(name) {
-  const lower = name.toLowerCase();
-  if (lower.includes(".png")) return "image/png";
-  if (lower.includes(".webp")) return "image/webp";
-  if (lower.includes(".gif")) return "image/gif";
-  return "image/jpeg";
-}
+const OPENAI_CHAT_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 function detectMime(bytes) {
   if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71 && bytes[4] === 13 && bytes[5] === 10 && bytes[6] === 26 && bytes[7] === 10) return "image/png";
@@ -368,10 +364,50 @@ function base64ToBytes(text) {
   return bytes;
 }
 
-function resolveMime(mimeType, src, bytes) {
+function normalizeMime(mimeType) {
   const lower = mimeType.split(";")[0]?.trim().toLowerCase() || "";
-  if (lower.startsWith("image/")) return lower;
-  return detectMime(bytes) || imageMimeFromName(src);
+  return lower === "image/jpg" ? "image/jpeg" : lower;
+}
+
+async function convertImageToPng(bytes, sourceMimeType) {
+  if (typeof createImageBitmap !== "function" || typeof OffscreenCanvas !== "function") {
+    throw new Error("当前浏览器无法转换该图片格式，请换用 JPEG、PNG、GIF 或 WebP 图片。");
+  }
+  const blob = new Blob([bytes], { type: sourceMimeType || "application/octet-stream" });
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(blob);
+  } catch {
+    throw new Error("图片数据不是有效图片，或当前浏览器无法解码该格式。请换用 JPEG、PNG、GIF 或 WebP 图片。");
+  }
+  try {
+    const maxSide = 1800;
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = new OffscreenCanvas(width, height);
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("无法创建图片转换上下文。");
+    context.drawImage(bitmap, 0, 0, width, height);
+    const output = await canvas.convertToBlob({ type: "image/png" });
+    const buffer = await output.arrayBuffer();
+    return { mimeType: "image/png", data: bytesToBase64(new Uint8Array(buffer)) };
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+async function normalizeImagePayload(bytes, mimeType) {
+  if (!bytes.length) throw new Error("图片数据为空，请换一张图片再试。");
+  const detected = detectMime(bytes);
+  if (detected && OPENAI_CHAT_IMAGE_MIMES.has(detected)) {
+    return { mimeType: detected, data: bytesToBase64(bytes) };
+  }
+  const declared = normalizeMime(mimeType);
+  if ((detected && detected.startsWith("image/")) || declared.startsWith("image/")) {
+    return convertImageToPng(bytes, detected || declared);
+  }
+  throw new Error("图片抓取结果不是有效图片，请换一张允许直接访问的网页图片。");
 }
 
 function aspectRatio(image) {
@@ -401,14 +437,18 @@ async function readImagePayload(target) {
   const dataUrl = parseDataUrl(target.src);
   if (dataUrl) {
     const bytes = base64ToBytes(dataUrl.data);
-    return { mimeType: resolveMime(dataUrl.mimeType, target.src, bytes), data: dataUrl.data };
+    return normalizeImagePayload(bytes, dataUrl.mimeType);
   }
-  const response = await fetch(target.src);
+  const response = await fetch(target.src, {
+    headers: {
+      Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/*,*/*;q=0.8",
+    },
+  });
   if (!response.ok) throw new Error(`图片抓取失败 (${response.status})，请换一张允许直接访问的网页图片。`);
   const blob = await response.blob();
   const buffer = await blob.arrayBuffer();
   const bytes = new Uint8Array(buffer);
-  return { mimeType: resolveMime(blob.type, target.src, bytes), data: bytesToBase64(bytes) };
+  return normalizeImagePayload(bytes, blob.type);
 }
 
 function buildPrompt(target, ratio, mode = "full") {
@@ -542,6 +582,40 @@ async function analyze(config, target) {
       );
     }
   }
+}
+
+function sanitizeHistoryEntries(value) {
+  return Array.isArray(value) ? value.filter((entry) => entry && typeof entry === "object").slice(0, 49) : [];
+}
+
+async function saveUploadedAnalysis(target, analysis) {
+  const record = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: Date.now(),
+    imageSrc: target.src,
+    pageUrl: target.pageUrl || "#",
+    imageWidth: typeof target.naturalWidth === "number" ? target.naturalWidth : void 0,
+    imageHeight: typeof target.naturalHeight === "number" ? target.naturalHeight : void 0,
+    analysis,
+    promptDrafts: {},
+  };
+  const stored = await chrome.storage.local.get(HISTORY_KEY);
+  const history = [record, ...sanitizeHistoryEntries(stored[HISTORY_KEY])].slice(0, 50);
+  await chrome.storage.local.set({
+    [HISTORY_KEY]: history,
+    [SNAPSHOT_KEY]: {
+      createdAt: record.createdAt,
+      target: {
+        src: target.src,
+        pageUrl: target.pageUrl || "#",
+        naturalWidth: record.imageWidth,
+        naturalHeight: record.imageHeight,
+      },
+      analysis,
+      promptDrafts: {},
+    },
+  });
+  return record;
 }
 
 async function testConnection(config) {
@@ -746,6 +820,28 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         respond({ ok: true, data: { ok: true } });
       } catch (error) {
         respond({ ok: false, error: error instanceof Error ? error.message : "连接测试失败。" });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === "ANALYZE_UPLOADED_IMAGE") {
+    (async () => {
+      try {
+        const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
+        const target = message.payload?.target;
+        if (!target || typeof target.src !== "string") throw new Error("没有拿到可分析的上传图片。");
+        const analysis = await analyze(config, {
+          src: target.src,
+          alt: target.alt || "uploaded image",
+          pageUrl: target.pageUrl || "#",
+          naturalWidth: target.naturalWidth,
+          naturalHeight: target.naturalHeight,
+        });
+        const record = await saveUploadedAnalysis(target, analysis);
+        respond({ ok: true, data: { record } });
+      } catch (error) {
+        respond({ ok: false, error: error instanceof Error ? error.message : "上传图片分析失败。" });
       }
     })();
     return true;
