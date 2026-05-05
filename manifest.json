@@ -1,0 +1,36 @@
+{
+   "action": {
+      "default_icon": {
+         "16": "icons/icon-16.png",
+         "32": "icons/icon-32.png",
+         "48": "icons/icon-48.png"
+      },
+      "default_popup": "popup.html",
+      "default_title": "MX-Insight"
+   },
+   "background": {
+      "service_worker": "background.js",
+      "type": "module"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "content.js" ],
+      "matches": [ "http://*/*", "https://*/*" ],
+      "run_at": "document_idle"
+   } ],
+   "description": "Analyze image elements and turn them into multilingual generation prompts.",
+   "host_permissions": [ "http://*/*", "https://*/*" ],
+   "icons": {
+      "128": "icons/icon-128.png",
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYzE32jh+71QfHJ/Cp+X50EukGg0QXqJrOaz6KueGqSq76bnaQNvb3uFB0ycH5XWeDvQsowFhSzeDRq1kIJ7yXYYNAdc+0AZ8eqySBKdG8gKabpg4yBFLBzyWySQmnE+UoDULbBwWMiuNyVgJzic+CcyO4zC4xFtqe8OWz5bpAa8Uhm50RQBMNyq4MocyjDq6MQ989UZGXCRBGEf7KzXYpQXTIjY4X3M8GE0ZdZjW0MGtEh72Yo4PNiOdUnjPGXB7Fy+fvvbEeQQljnDLmrsVgayhnNOuqIrkmV5I1p1YPKMx/VCyJ7yxdkdaysWoIYl/D/tlqaFWVEqIN3jIHxTMwIDAQAB",
+   "manifest_version": 3,
+   "name": "MX-Insight",
+   "options_page": "options.html",
+   "permissions": [ "contextMenus", "storage", "scripting", "activeTab" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "0.1.1"
+}
