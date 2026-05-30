@@ -86,6 +86,8 @@ a{color:inherit}
 .toggle-switch.is-on .toggle-thumb{transform:translateX(22px)}
 .popup-actions,.modal-actions{align-items:center}
 .popup-actions>*,.modal-actions>*{flex:1}
+.popup-action-stack{display:grid;gap:10px}
+.popup-action-stack>.primary-action{width:100%}
 .primary-action,.secondary-action,.text-button,.icon-button,.choice-card{cursor:pointer}
 .primary-action,.secondary-action{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .primary-action{background:var(--accent);border-color:var(--accent);color:var(--bg)}
@@ -103,7 +105,9 @@ a{color:inherit}
 .brand-copy{display:grid;gap:3px;min-width:0}
 .brand-copy h1{margin:0;font-size:18px;line-height:1.1}
 .brand-copy p{margin:0;font-size:12px;color:var(--muted);line-height:1.3}
-.side-nav{display:grid;gap:8px;margin-top:22px}
+.side-nav{display:grid;gap:18px;margin-top:22px}
+.side-nav-group{display:grid;gap:8px}
+.side-nav-label{margin:0 0 2px;font-size:11px;letter-spacing:0;text-transform:uppercase;color:var(--muted)}
 .side-nav-item{width:100%;display:grid;gap:4px;text-align:left;border:1px solid transparent;background:transparent;color:var(--fg);padding:12px;border-radius:8px;cursor:pointer}
 .side-nav-item:hover,.side-nav-item.is-active{background:var(--soft);border-color:var(--line)}
 .side-nav-title{font-weight:650;font-size:14px}
@@ -116,6 +120,7 @@ a{color:inherit}
 .side-rail p{margin:0;color:var(--muted);line-height:1.6}
 .brand-mark{margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
 .workspace{padding:24px;display:grid;gap:18px;align-content:start}
+.view-stack{display:grid;gap:18px;width:min(1120px,100%)}
 .hero-panel,.panel-section{padding:18px;display:grid;gap:14px}
 .hero-panel{grid-template-columns:minmax(0,1fr) auto;align-items:end}
 .hero-panel h2{font-size:24px}

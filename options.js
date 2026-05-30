@@ -54,6 +54,20 @@ const TEXT = {
     cancel: "Cancel",
     saved: "Settings saved.",
     connected: "Connection is available.",
+    navLocal: "Local data",
+    navBackend: "Backend",
+    navHistory: "Saved records",
+    navHistorySub: "Browse local analyses",
+    navApi: "API settings",
+    navApiSub: "Endpoint, key and model",
+    navPreferences: "Preferences",
+    navPreferencesSub: "Language and extension switch",
+    navAccount: "Account mode",
+    navAccountSub: "SMVAPI login status",
+    apiTitle: "Custom API",
+    apiCopy: "Manage the endpoint used for image analysis.",
+    preferencesTitle: "Preferences",
+    preferencesCopy: "Control language and page analysis availability.",
     historyTitle: "Local saved records",
     historyCopy: "Records are stored in chrome.storage.local on this browser.",
     emptyHistory: "No saved records yet.",
@@ -95,6 +109,20 @@ const TEXT = {
     cancel: "取消",
     saved: "设置已保存。",
     connected: "接口已连通。",
+    navLocal: "本地数据",
+    navBackend: "后台",
+    navHistory: "保存记录",
+    navHistorySub: "查看本地分析记录",
+    navApi: "接口设置",
+    navApiSub: "地址、密钥和模型",
+    navPreferences: "偏好设置",
+    navPreferencesSub: "语言和插件开关",
+    navAccount: "账户模式",
+    navAccountSub: "SMVAPI 登录状态",
+    apiTitle: "自定义接口",
+    apiCopy: "管理图片分析使用的接口配置。",
+    preferencesTitle: "偏好设置",
+    preferencesCopy: "控制界面语言和网页分析开关。",
     historyTitle: "本地保存记录",
     historyCopy: "记录保存在当前浏览器本地存储中。",
     emptyHistory: "还没有保存记录。",
@@ -136,6 +164,20 @@ const TEXT = {
     cancel: "取消",
     saved: "設定已保存。",
     connected: "介面已連通。",
+    navLocal: "本地資料",
+    navBackend: "後台",
+    navHistory: "保存記錄",
+    navHistorySub: "查看本地分析記錄",
+    navApi: "介面設定",
+    navApiSub: "位址、密鑰和模型",
+    navPreferences: "偏好設定",
+    navPreferencesSub: "語言和插件開關",
+    navAccount: "帳戶模式",
+    navAccountSub: "SMVAPI 登入狀態",
+    apiTitle: "自訂介面",
+    apiCopy: "管理圖片分析使用的介面設定。",
+    preferencesTitle: "偏好設定",
+    preferencesCopy: "控制介面語言和網頁分析開關。",
     historyTitle: "本地保存記錄",
     historyCopy: "記錄保存在目前瀏覽器本地儲存中。",
     emptyHistory: "還沒有保存記錄。",
@@ -177,6 +219,20 @@ const TEXT = {
     cancel: "キャンセル",
     saved: "設定を保存しました。",
     connected: "接続できます。",
+    navLocal: "ローカルデータ",
+    navBackend: "管理",
+    navHistory: "保存履歴",
+    navHistorySub: "ローカル分析を確認",
+    navApi: "API 設定",
+    navApiSub: "URL、キー、モデル",
+    navPreferences: "環境設定",
+    navPreferencesSub: "言語と拡張機能",
+    navAccount: "アカウントモード",
+    navAccountSub: "SMVAPI ログイン状態",
+    apiTitle: "カスタム API",
+    apiCopy: "画像分析に使用する API を管理します。",
+    preferencesTitle: "環境設定",
+    preferencesCopy: "表示言語とページ分析の有効状態を管理します。",
     historyTitle: "ローカル保存履歴",
     historyCopy: "履歴はこのブラウザの chrome.storage.local に保存されます。",
     emptyHistory: "保存履歴はまだありません。",
@@ -189,16 +245,23 @@ const TEXT = {
 const root = document.getElementById("root");
 let settings = { ...DEFAULTS };
 let historyEntries = [];
-let modalOpen = false;
 let welcomeMode = location.hash === "#welcome";
+let modalOpen = !welcomeMode && (location.hash === "#base-url" || location.hash === "#custom-api");
 let welcomeReady = !welcomeMode;
-let activeSection = "history";
+let activeSection = sectionFromHash();
 let message = "";
 let messageTone = "";
 let saving = false;
 let testing = false;
 
 document.body.dataset.page = "options";
+
+function sectionFromHash(hash = location.hash) {
+  if (hash === "#api" || hash === "#settings" || hash === "#base-url" || hash === "#custom-api") return "api";
+  if (hash === "#preferences") return "preferences";
+  if (hash === "#account") return "account";
+  return "history";
+}
 
 function detectLanguage(value = settings.uiLanguage) {
   if (value && value !== "auto") return TEXT[value] ? value : "en";
@@ -401,14 +464,28 @@ function renderSidebar() {
         </div>
       </div>
       <nav class="side-nav" aria-label="后台导航">
-        <button type="button" class="side-nav-item${activeSection === "history" ? " is-active" : ""}" data-section="history">
-          <span class="side-nav-title">保存记录</span>
-          <span class="side-nav-subtitle">查看本地分析记录</span>
-        </button>
-        <button type="button" class="side-nav-item${activeSection === "settings" ? " is-active" : ""}" data-section="settings">
-          <span class="side-nav-title">设置</span>
-          <span class="side-nav-subtitle">接口、语言和插件</span>
-        </button>
+        <div class="side-nav-group">
+          <p class="side-nav-label">${escapeHtml(t("navLocal"))}</p>
+          <button type="button" class="side-nav-item${activeSection === "history" ? " is-active" : ""}" data-section="history">
+            <span class="side-nav-title">${escapeHtml(t("navHistory"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("navHistorySub"))}</span>
+          </button>
+        </div>
+        <div class="side-nav-group">
+          <p class="side-nav-label">${escapeHtml(t("navBackend"))}</p>
+          <button type="button" class="side-nav-item${activeSection === "api" ? " is-active" : ""}" data-section="api">
+            <span class="side-nav-title">${escapeHtml(t("navApi"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("navApiSub"))}</span>
+          </button>
+          <button type="button" class="side-nav-item${activeSection === "preferences" ? " is-active" : ""}" data-section="preferences">
+            <span class="side-nav-title">${escapeHtml(t("navPreferences"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("navPreferencesSub"))}</span>
+          </button>
+          <button type="button" class="side-nav-item${activeSection === "account" ? " is-active" : ""}" data-section="account">
+            <span class="side-nav-title">${escapeHtml(t("navAccount"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("navAccountSub"))}</span>
+          </button>
+        </div>
       </nav>
       <footer>Copyright © Maishan Inc.</footer>
     </aside>
@@ -423,15 +500,40 @@ function renderHistoryView() {
   `;
 }
 
-function renderSettingsView() {
+function renderApiView() {
   const configured = settings.baseUrl && settings.model;
   return `
     <section class="view-stack">
       <section class="hero-panel">
         <div>
           <img src="/icons/icon-128.png" alt="" class="section-logo" />
-          <h2>设置</h2>
-          <p>接口、语言和插件开关。</p>
+          <h2>${escapeHtml(t("apiTitle"))}</h2>
+          <p>${escapeHtml(t("apiCopy"))}</p>
+        </div>
+      </section>
+
+      <article class="panel-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">${escapeHtml(t("apiSummary"))}</p>
+            <h2>${escapeHtml(configured ? settings.model : t("apiMissing"))}</h2>
+            <p>${escapeHtml(configured ? settings.baseUrl : t("customApiCopy"))}</p>
+          </div>
+          <button type="button" class="primary-action" id="edit-api">${escapeHtml(t("edit"))}</button>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderPreferencesView() {
+  return `
+    <section class="view-stack">
+      <section class="hero-panel">
+        <div>
+          <img src="/icons/icon-128.png" alt="" class="section-logo" />
+          <h2>${escapeHtml(t("preferencesTitle"))}</h2>
+          <p>${escapeHtml(t("preferencesCopy"))}</p>
         </div>
         <div class="control-row">
           <label class="compact-field">
@@ -446,27 +548,27 @@ function renderSettingsView() {
           </label>
         </div>
       </section>
-
-      <section class="panel-grid">
-        <article class="panel-section">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">${escapeHtml(t("apiSummary"))}</p>
-              <h2>${escapeHtml(configured ? settings.model : t("apiMissing"))}</h2>
-              <p>${escapeHtml(configured ? settings.baseUrl : t("customApiCopy"))}</p>
-            </div>
-            <button type="button" class="primary-action" id="edit-api">${escapeHtml(t("edit"))}</button>
-          </div>
-        </article>
-
-        <article class="panel-section disabled-panel" title="${escapeHtml(t("unavailableTip"))}">
-          <p class="eyebrow">${escapeHtml(t("account"))}</p>
-          <h2>${escapeHtml(t("smvapi"))}</h2>
-          <p>${escapeHtml(t("unavailable"))}</p>
-        </article>
-      </section>
     </section>
   `;
+}
+
+function renderAccountView() {
+  return `
+    <section class="view-stack">
+      <article class="panel-section disabled-panel" title="${escapeHtml(t("unavailableTip"))}">
+        <p class="eyebrow">${escapeHtml(t("account"))}</p>
+        <h2>${escapeHtml(t("smvapi"))}</h2>
+        <p>${escapeHtml(t("unavailable"))}</p>
+      </article>
+    </section>
+  `;
+}
+
+function renderActiveView() {
+  if (activeSection === "api") return renderApiView();
+  if (activeSection === "preferences") return renderPreferencesView();
+  if (activeSection === "account") return renderAccountView();
+  return renderHistoryView();
 }
 
 function renderModal() {
@@ -520,7 +622,7 @@ function render() {
       ${renderSidebar()}
 
       <section class="workspace">
-        ${activeSection === "history" ? renderHistoryView() : renderSettingsView()}
+        ${renderActiveView()}
       </section>
       ${renderModal()}
     </main>
@@ -555,7 +657,8 @@ function bindEvents() {
   document.getElementById("clear-history")?.addEventListener("click", clearHistory);
   document.querySelectorAll("[data-section]").forEach((button) => {
     button.addEventListener("click", () => {
-      activeSection = button.dataset.section === "settings" ? "settings" : "history";
+      activeSection = ["api", "preferences", "account", "history"].includes(button.dataset.section) ? button.dataset.section : "history";
+      history.replaceState(null, "", `options.html#${activeSection}`);
       render();
     });
   });

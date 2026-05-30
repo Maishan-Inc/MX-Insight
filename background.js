@@ -3,6 +3,9 @@ const OFF_BADGE = "OFF";
 const SETTINGS_KEY = "enabled";
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
+const IMAGE_FETCH_TIMEOUT_MS = 30000;
+const ANALYSIS_REQUEST_TIMEOUT_MS = 120000;
+const TEST_REQUEST_TIMEOUT_MS = 20000;
 
 const GENERATOR_SITES = {
   jimeng: "https://jimeng.jianying.com/",
@@ -336,6 +339,23 @@ function requestError(kind, config, error) {
     : new Error(`${label}发起失败：${detail}`);
 }
 
+function isAbortError(error) {
+  return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
+}
+
+async function withTimeout(timeoutMs, timeoutMessage, operation) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await operation(controller.signal);
+  } catch (error) {
+    if (isAbortError(error)) throw new Error(timeoutMessage);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const OPENAI_CHAT_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 function detectMime(bytes) {
@@ -439,16 +459,20 @@ async function readImagePayload(target) {
     const bytes = base64ToBytes(dataUrl.data);
     return normalizeImagePayload(bytes, dataUrl.mimeType);
   }
-  const response = await fetch(target.src, {
-    headers: {
-      Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/*,*/*;q=0.8",
-    },
+  const bytesAndType = await withTimeout(IMAGE_FETCH_TIMEOUT_MS, "图片抓取超时（30 秒），请换一张允许直接访问的网页图片。", async (signal) => {
+    const response = await fetch(target.src, {
+      signal,
+      headers: {
+        Accept: "image/png,image/jpeg,image/webp,image/gif,image/avif,image/*,*/*;q=0.8",
+      },
+    });
+    if (!response.ok) throw new Error(`图片抓取失败 (${response.status})，请换一张允许直接访问的网页图片。`);
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+    return { bytes: new Uint8Array(buffer), mimeType: blob.type };
   });
-  if (!response.ok) throw new Error(`图片抓取失败 (${response.status})，请换一张允许直接访问的网页图片。`);
-  const blob = await response.blob();
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  return normalizeImagePayload(bytes, blob.type);
+  const bytes = bytesAndType.bytes;
+  return normalizeImagePayload(bytes, bytesAndType.mimeType);
 }
 
 function buildPrompt(target, ratio, mode = "full") {
@@ -501,63 +525,81 @@ function looksBrokenJson(error) {
 
 async function callGemini(config, target, image, ratio, compact = false) {
   const url = `${trimUrl(config.baseUrl)}/models/${config.model.trim()}:generateContent?key=${encodeURIComponent(config.apiKey.trim())}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") }, { inlineData: { mimeType: image.mimeType, data: image.data } }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.18,
-        maxOutputTokens: compact ? 3600 : 2600,
-        responseMimeType: "application/json",
-        responseJsonSchema: RESPONSE_SCHEMA,
-      },
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+  let payload;
+  try {
+    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+      const response = await fetch(url, {
+        signal,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") }, { inlineData: { mimeType: image.mimeType, data: image.data } }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.18,
+            maxOutputTokens: compact ? 3600 : 2600,
+            responseMimeType: "application/json",
+            responseJsonSchema: RESPONSE_SCHEMA,
+          },
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+      }
+      return response.json();
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("分析请求失败")) throw error;
+    throw requestError("analysis", config, error);
   }
-  const payload = await response.json();
   return extractJson(extractTextParts(payload));
 }
 
 async function callOpenAICompatible(config, target, image, ratio, compact = false) {
   const url = `${trimUrl(config.baseUrl)}/chat/completions`;
   const model = modelName(config);
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey.trim()}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.18,
-      max_tokens: compact ? 3600 : 2600,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") },
-            { type: "image_url", image_url: { url: toDataUrl(image.mimeType, image.data) } },
-          ],
+  let payload;
+  try {
+    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+      const response = await fetch(url, {
+        signal,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey.trim()}`,
         },
-      ],
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+        body: JSON.stringify({
+          model,
+          temperature: 0.18,
+          max_tokens: compact ? 3600 : 2600,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") },
+                { type: "image_url", image_url: { url: toDataUrl(image.mimeType, image.data) } },
+              ],
+            },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+      }
+      return response.json();
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("分析请求失败")) throw error;
+    throw requestError("analysis", config, error);
   }
-  const payload = await response.json();
   return extractJson(extractOpenAiText(payload));
 }
 
@@ -622,38 +664,56 @@ async function testConnection(config) {
   validateConfig(config);
   if (providerKind(config.baseUrl) === "gemini") {
     const url = `${trimUrl(config.baseUrl)}/models/${config.model.trim()}:generateContent?key=${encodeURIComponent(config.apiKey.trim())}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system_instruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: "user", parts: [{ text: "Reply with exactly OK." }] }] }),
-    });
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`连接测试失败 (${response.status}) ${body || response.statusText}`.trim());
+    let payload;
+    try {
+      payload = await withTimeout(TEST_REQUEST_TIMEOUT_MS, "连接测试超时（20 秒），请检查接口地址、网络代理或模型服务状态。", async (signal) => {
+        const response = await fetch(url, {
+          signal,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ system_instruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: "user", parts: [{ text: "Reply with exactly OK." }] }] }),
+        });
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`连接测试失败 (${response.status}) ${body || response.statusText}`.trim());
+        }
+        return response.json();
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("连接测试失败")) throw error;
+      throw requestError("test", config, error);
     }
-    const payload = await response.json();
     if (!extractTextParts(payload)) throw new Error("接口已连通，但没有返回有效内容。");
     return;
   }
 
   const url = `${trimUrl(config.baseUrl)}/chat/completions`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey.trim()}`,
-    },
-    body: JSON.stringify({
-      model: modelName(config),
-      max_tokens: 16,
-      messages: [{ role: "user", content: "Reply with exactly OK." }],
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`连接测试失败 (${response.status}) ${body || response.statusText}`.trim());
+  let payload;
+  try {
+    payload = await withTimeout(TEST_REQUEST_TIMEOUT_MS, "连接测试超时（20 秒），请检查接口地址、网络代理或模型服务状态。", async (signal) => {
+      const response = await fetch(url, {
+        signal,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model: modelName(config),
+          max_tokens: 16,
+          messages: [{ role: "user", content: "Reply with exactly OK." }],
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`连接测试失败 (${response.status}) ${body || response.statusText}`.trim());
+      }
+      return response.json();
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("连接测试失败")) throw error;
+    throw requestError("test", config, error);
   }
-  const payload = await response.json();
   if (!extractOpenAiText(payload)) throw new Error("接口已连通，但没有返回有效内容。");
 }
 
@@ -848,7 +908,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   }
 
   if (message.type === "OPEN_SETTINGS") {
-    openOptions(message.payload?.focus === "base-url" ? "#base-url" : "");
+    const focus = message.payload?.focus;
+    const hash =
+      focus === "base-url" ? "#base-url" :
+      focus === "history" ? "#history" :
+      focus === "preferences" ? "#preferences" :
+      focus === "account" ? "#account" :
+      "#api";
+    openOptions(hash);
     respond({ ok: true, data: { opened: true } });
     return false;
   }

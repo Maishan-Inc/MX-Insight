@@ -191,6 +191,23 @@ function closeUploadModal() {
   render();
 }
 
+async function openActivePanel() {
+  if (!settings.enabled || opening) return;
+  opening = true;
+  message = "";
+  render();
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "OPEN_ACTIVE_PANEL" });
+    if (!response?.ok) throw new Error(response?.error || t("panelError"));
+    window.close();
+  } catch (error) {
+    message = error instanceof Error ? error.message : t("panelError");
+  } finally {
+    opening = false;
+    render();
+  }
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -264,8 +281,12 @@ async function saveLanguage(value) {
   render();
 }
 
-function openSettings() {
-  chrome.runtime.openOptionsPage();
+async function openSettings(section = "settings") {
+  try {
+    await chrome.runtime.sendMessage({ type: "OPEN_SETTINGS", payload: { focus: section === "history" ? "history" : "api" } });
+  } catch {
+    chrome.runtime.openOptionsPage();
+  }
   window.close();
 }
 
@@ -326,11 +347,14 @@ function render() {
           <span class="toggle-switch${settings.enabled ? " is-on" : ""}" aria-hidden="true"><span class="toggle-thumb"></span></span>
         </button>
 
-        <div class="popup-actions">
+        <div class="popup-action-stack">
           <button type="button" class="primary-action" id="open-panel" ${!settings.enabled || opening ? "disabled" : ""}>
-            ${escapeHtml(opening ? t("opening") : t("uploadImage"))}
+            ${escapeHtml(opening ? t("opening") : t("openPanel"))}
           </button>
-          <button type="button" class="secondary-action" id="open-settings">${escapeHtml(t("settings"))}</button>
+          <div class="popup-actions">
+            <button type="button" class="secondary-action" id="open-upload" ${!settings.enabled || uploadBusy ? "disabled" : ""}>${escapeHtml(t("uploadImage"))}</button>
+            <button type="button" class="secondary-action" id="open-settings">${escapeHtml(t("settings"))}</button>
+          </div>
         </div>
 
         ${message ? `<p class="popup-message">${escapeHtml(message)}</p>` : ""}
@@ -341,10 +365,11 @@ function render() {
   `;
 
   document.getElementById("toggle")?.addEventListener("click", setEnabled);
-  document.getElementById("open-panel")?.addEventListener("click", openUploadModal);
-  document.getElementById("open-settings")?.addEventListener("click", openSettings);
+  document.getElementById("open-panel")?.addEventListener("click", openActivePanel);
+  document.getElementById("open-upload")?.addEventListener("click", openUploadModal);
+  document.getElementById("open-settings")?.addEventListener("click", () => openSettings("settings"));
   document.getElementById("close-upload")?.addEventListener("click", closeUploadModal);
-  document.getElementById("view-records")?.addEventListener("click", openSettings);
+  document.getElementById("view-records")?.addEventListener("click", () => openSettings("history"));
   const uploadInput = document.getElementById("upload-input");
   const dropzone = document.getElementById("upload-dropzone");
   dropzone?.addEventListener("click", () => uploadInput?.click());
