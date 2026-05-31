@@ -29,7 +29,7 @@
    "manifest_version": 3,
    "name": "MX-Insight",
    "options_page": "options.html",
-   "permissions": [ "contextMenus", "storage", "scripting", "activeTab" ],
+   "permissions": [ "contextMenus", "storage", "scripting", "activeTab", "notifications" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "0.1.1"
 }

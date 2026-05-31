@@ -928,6 +928,22 @@ function taskTitle(target) {
   }
 }
 
+function showTaskCompleteNotification(task, record) {
+  if (!chrome.notifications?.create) return;
+  const title = "反推完成";
+  const message = `${task?.title || "图片"} 已完成反推`;
+  const options = {
+    type: "basic",
+    iconUrl: "icons/icon-128.png",
+    title,
+    message,
+    priority: 1,
+  };
+  chrome.notifications.create(`mx-insight-task-${task?.id || Date.now()}`, options, () => {
+    chrome.runtime.lastError;
+  });
+}
+
 async function upsertTask(patch) {
   const stored = await chrome.storage.local.get(TASKS_KEY);
   const tasks = sanitizeTasks(stored[TASKS_KEY]);
@@ -1201,7 +1217,7 @@ async function startAnalysisTask(rawTarget, options = {}) {
       ));
       if (timeoutId !== null) clearTimeout(timeoutId);
       const record = await saveReversePromptAnalysis(target, analysis, taskId);
-      await upsertTask({
+      const completedTask = await upsertTask({
         id: taskId,
         status: "success",
         progress: 100,
@@ -1212,6 +1228,7 @@ async function startAnalysisTask(rawTarget, options = {}) {
         imageSrc: record.imageSrc,
         completedAt: Date.now(),
       });
+      showTaskCompleteNotification(completedTask, record);
     } catch (error) {
       if (timeoutId !== null) clearTimeout(timeoutId);
       await upsertTask({

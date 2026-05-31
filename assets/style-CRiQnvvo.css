@@ -602,7 +602,7 @@ a {
   height: calc(100vh - 52px);
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 260px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 300px) minmax(0, 1fr);
   gap: 14px;
   overflow: hidden;
 }
@@ -624,7 +624,7 @@ a {
 }
 
 .task-pane {
-  max-height: 260px;
+  max-height: 300px;
 }
 
 .record-pane {
@@ -709,7 +709,7 @@ a {
 .record-card {
   position: relative;
   display: grid;
-  grid-template-rows: 210px minmax(0, 1fr);
+  grid-template-rows: 300px minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -880,6 +880,6 @@ a {
   }
 
   .record-card {
-    grid-template-rows: 180px minmax(0, 1fr);
+    grid-template-rows: 260px minmax(0, 1fr);
   }
 }
