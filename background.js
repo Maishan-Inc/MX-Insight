@@ -6,6 +6,8 @@ const SNAPSHOT_KEY = "latestAnalysisSnapshot";
 const IMAGE_FETCH_TIMEOUT_MS = 30000;
 const ANALYSIS_REQUEST_TIMEOUT_MS = 120000;
 const TEST_REQUEST_TIMEOUT_MS = 20000;
+const OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS = 1800;
+const OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS = 1400;
 
 const GENERATOR_SITES = {
   jimeng: "https://jimeng.jianying.com/",
@@ -16,11 +18,11 @@ const GENERATOR_SITES = {
 
 const SYSTEM_PROMPT = [
   "You are an extremely rigorous visual analyst, cinematography analyst, and prompt engineer.",
-  "Always produce highly detailed, visually grounded prompt output for every supported model provider.",
+  "Produce concise, visually grounded prompt output for every supported model provider.",
   "Return valid JSON only and follow the requested schema exactly.",
-  "Make zh.prompt, zh_hant.prompt, en.prompt, and ja.prompt richly detailed, production-ready, and information-dense while keeping the requested field order.",
-  "Make json_prompt the most detailed layer of the output, using nested objects and arrays when useful, but prefer compact factual phrases over verbose prose.",
-  "Cover composition, lens language, spatial layout, subjects, objects, text, symbols, lighting, color, materials, background, environment, and generation constraints.",
+  "Make zh.prompt, zh_hant.prompt, en.prompt, and ja.prompt production-ready but compact.",
+  "Make json_prompt factual and reconstructable, using compact strings and short arrays.",
+  "Cover subject, composition, details, lighting, color, style, camera language and visible text without long prose.",
   "Do not hallucinate. When uncertain, mark information as uncertain or approximate.",
 ].join(" ");
 
@@ -509,17 +511,20 @@ function buildPrompt(target, ratio, mode = "full") {
     "",
     "Analyze the provided image and return valid JSON only.",
     "",
-    "Use the schema exactly and make each language field explicit.",
-    "Focus on subject, action/pose, details/appearance, environment/background, lighting/atmosphere, style/camera, colors, materials and aspect ratio.",
-    "The json_prompt must preserve the baseline top-level keys while adding only the extra nested fields needed for faithful reconstruction.",
-    "Prefer compact phrases, compact arrays and compact nested objects over long natural-language paragraphs.",
+    "Return exactly this JSON shape and no other text:",
+    '{"zh":{"prompt":"","analysis":""},"zh_hant":{"prompt":"","analysis":""},"en":{"prompt":"","analysis":""},"ja":{"prompt":"","analysis":""},"zh_style_tags":[],"zh_hant_style_tags":[],"en_style_tags":[],"ja_style_tags":[],"json_prompt":{"subject":"","action_pose":"","details_appearance":"","environment_background":"","lighting_atmosphere":"","style_camera":"","colors":[],"materials":[],"aspect_ratio":""},"confidence":0.0}',
+    "",
+    "Keep every prompt field under 120 words.",
+    "Keep every analysis field under 45 words.",
+    "Use 4 to 6 short style tags per language.",
+    "Keep json_prompt values compact and factual.",
   ];
 
   if (mode === "compact-retry") {
     base.push(
       "Your previous attempt was malformed or truncated JSON. Regenerate from scratch as valid JSON only.",
-      "Keep all language fields detailed but concise.",
-      "Keep json_prompt strict and reconstructable, but use compact factual phrases and avoid repetitive prose.",
+      "Use shorter prompt fields and avoid repeated descriptions.",
+      "Do not include markdown, comments, reasoning or explanations outside the JSON object.",
     );
   }
 
@@ -540,8 +545,11 @@ function toDataUrl(mimeType, data) {
 async function extractJson(text) {
   const stripped = stripFence(text);
   if (!stripped) throw new Error("接口没有返回可解析的内容。");
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  const jsonText = start >= 0 && end > start ? stripped.slice(start, end + 1) : stripped;
   try {
-    return parseResponse(JSON.parse(stripped));
+    return parseResponse(JSON.parse(jsonText));
   } catch (error) {
     throw new Error(`接口返回了非 JSON 内容：${error instanceof Error ? error.message : "unknown error"}`);
   }
@@ -551,11 +559,15 @@ function looksBrokenJson(error) {
   return error instanceof Error && /JSON|Unterminated string|Unexpected end|Unexpected token|格式损坏|被截断/i.test(error.message);
 }
 
-function buildOpenAiChatBody(model, target, image, ratio, compact = false, stream = false) {
-  return {
+function openAiTokenParam(model) {
+  return /^(gpt-5|o\d|o-)/i.test(model.trim()) ? "max_completion_tokens" : "max_tokens";
+}
+
+function buildOpenAiChatBody(model, target, image, ratio, compact = false, stream = false, options = {}) {
+  const tokenLimit = compact ? OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS : OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS;
+  const body = {
     model,
     temperature: 0.18,
-    max_tokens: compact ? 3600 : 2600,
     stream,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -568,6 +580,9 @@ function buildOpenAiChatBody(model, target, image, ratio, compact = false, strea
       },
     ],
   };
+  body[options.tokenParam || openAiTokenParam(model)] = tokenLimit;
+  if (options.responseFormat !== false) body.response_format = { type: "json_object" };
+  return body;
 }
 
 async function readOpenAiStream(response) {
@@ -710,7 +725,7 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
             "Content-Type": "application/json",
             Authorization: `Bearer ${config.apiKey.trim()}`,
           },
-          body: JSON.stringify(buildOpenAiChatBody(model, target, image, ratio, compact, false)),
+          body: JSON.stringify(buildOpenAiChatBody(model, target, image, ratio, compact, false, { responseFormat: false, tokenParam: "max_tokens" })),
         });
         if (!response.ok) {
           const body = await response.text();
