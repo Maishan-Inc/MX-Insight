@@ -79,7 +79,7 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
       rgba(255, 255, 255, 0.02);
-    color: rgba(247, 250, 255, 0.96);
+    color: rgba(23, 32, 51, 0.96);
     font-size: calc(11px * var(--image-action-scale));
     font-weight: 580;
     letter-spacing: 0.02em;
@@ -828,17 +828,17 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     pointer-events: auto;
     color: rgba(247, 250, 255, 0.96);
     border-radius: 28px;
-    border: 1px solid rgba(241, 247, 255, 0.22);
+    border: 1px solid rgba(213, 222, 235, 0.96);
     background:
-      linear-gradient(180deg, rgba(20, 23, 30, 0.48), rgba(3, 5, 10, 0.52)),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 253, 0.96)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(238, 243, 249, 0.72));
     box-shadow:
-      0 22px 54px rgba(0, 0, 0, 0.22),
-      0 10px 20px rgba(0, 0, 0, 0.14),
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(28px) saturate(1.04);
-    -webkit-backdrop-filter: blur(28px) saturate(1.04);
+      0 22px 46px rgba(15, 23, 42, 0.12),
+      0 8px 18px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(214, 224, 236, 0.42);
+    backdrop-filter: blur(18px) saturate(1.02);
+    -webkit-backdrop-filter: blur(18px) saturate(1.02);
     opacity: 1;
     transform: none;
     transform-origin: left center;
@@ -855,7 +855,7 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     position: absolute;
     inset: 1px;
     border-radius: 27px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.01) 26%, transparent 40%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.18) 28%, transparent 44%);
     pointer-events: none;
   }
 
@@ -876,8 +876,8 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
-    color: rgba(244, 248, 255, 0.88);
+    margin-bottom: 16px;
+    color: rgba(23, 32, 51, 0.9);
   }
 
   .history-rail-heading {
@@ -895,17 +895,17 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
 
   .history-rail-count {
     font-size: 11px;
-    color: rgba(233, 241, 255, 0.64);
+    color: rgba(104, 115, 133, 0.9);
   }
 
   .history-list {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    gap: 10px;
+    gap: 12px;
     min-height: 0;
     overflow: auto;
-    padding-right: 4px;
+    padding: 4px 4px 0 0;
   }
 
   .history-list.has-selection .history-item:not(.is-selected) {
@@ -923,7 +923,7 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     text-align: center;
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(233, 241, 255, 0.66);
+    color: rgba(104, 115, 133, 0.9);
   }
 
   .history-list::-webkit-scrollbar {
@@ -931,7 +931,7 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
   }
 
   .history-list::-webkit-scrollbar-thumb {
-    background: rgba(231, 241, 255, 0.24);
+    background: rgba(151, 164, 184, 0.36);
     border-radius: 999px;
   }
 
@@ -978,19 +978,20 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
     height: 100%;
     box-sizing: border-box;
     border-radius: inherit;
-    border: 1px solid rgba(229, 239, 255, 0.12);
+    border: 1px solid rgba(203, 213, 225, 0.88);
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
-      rgba(255, 255, 255, 0.018);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 247, 251, 0.9)),
+      rgba(255, 255, 255, 0.86);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
     overflow: hidden;
   }
 
   .history-item.is-selected .history-card-face {
-    border-color: rgba(243, 248, 255, 0.24);
+    border-color: rgba(37, 99, 235, 0.42);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      0 0 0 2px rgba(37, 99, 235, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
   }
 
   .history-card-face.image-face {
@@ -2581,13 +2582,8 @@ const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGenerat
           data-inline-action="prompt"
           ${n?.promptStatus==="loading"?"disabled":""}
         >${r}</button>
-        <button
-          type="button"
-          class="image-action-button"
-          data-inline-action="open"
-        >${d.openAction}</button>
       </div>
-    `:"";const o=J.querySelector(".image-action-menu");o&&(o.onpointerenter=()=>{B=!0,Ge()},o.onpointerleave=()=>{B=!1,Oe()},o.querySelectorAll("[data-inline-action]").forEach(s=>{s.onclick=async g=>{if(g.preventDefault(),g.stopPropagation(),!N||!q)return;const f=s.dataset.inlineAction;if(f==="prompt"){await sr();return}f==="open"&&await lr()}})),pt()}function ge(){if(ue){if(!K||!ne||ct()){ue.innerHTML="";return}ue.innerHTML=`
+    `:"";const o=J.querySelector(".image-action-menu");o&&(o.onpointerenter=()=>{B=!0,Ge()},o.onpointerleave=()=>{B=!1,Oe()},o.querySelectorAll("[data-inline-action]").forEach(s=>{s.onclick=async g=>{if(g.preventDefault(),g.stopPropagation(),!N||!q)return;s.dataset.inlineAction==="prompt"&&await sr()}})),pt()}function ge(){if(ue){if(!K||!ne||ct()){ue.innerHTML="";return}ue.innerHTML=`
     <div class="image-action-toast${ne.tone==="error"?" is-error":""}">
       ${S(ne.message)}
     </div>

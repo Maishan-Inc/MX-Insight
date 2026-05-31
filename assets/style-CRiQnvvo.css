@@ -368,6 +368,34 @@ a {
   min-height: 100vh;
 }
 
+.admin-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 30;
+  min-width: 128px;
+  max-width: min(320px, calc(100vw - 44px));
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.admin-toast.is-success {
+  border-color: rgba(22, 128, 60, 0.24);
+  color: var(--success);
+}
+
+.admin-toast.is-error {
+  border-color: rgba(220, 38, 38, 0.24);
+  color: var(--danger);
+}
+
 .side-rail {
   position: sticky;
   top: 0;
@@ -433,22 +461,32 @@ a {
   padding: 26px;
   display: grid;
   align-content: start;
+  min-width: 0;
+  width: 100%;
 }
 
 .view-stack {
-  width: min(1240px, 100%);
+  width: 100%;
   display: grid;
   gap: 18px;
 }
 
 .settings-grid {
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(520px, 1.6fr) minmax(320px, 0.75fr);
   align-items: start;
 }
 
-.page-title,
-.settings-api-card {
+.page-title {
   grid-column: 1 / -1;
+}
+
+.settings-api-card {
+  grid-column: 1;
+  grid-row: 2 / span 2;
+}
+
+.settings-grid > .settings-side-card {
+  grid-column: 2;
 }
 
 .page-title {
@@ -514,8 +552,9 @@ a {
 
 .record-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
   gap: 16px;
+  width: 100%;
 }
 
 .record-card {
@@ -627,6 +666,12 @@ a {
 
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-api-card,
+  .settings-grid > .settings-side-card {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
 

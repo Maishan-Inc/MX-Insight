@@ -192,6 +192,9 @@ let historyEntries = [];
 let activeSection = sectionFromHash();
 let message = "";
 let messageTone = "";
+let toast = "";
+let toastTone = "";
+let toastTimer = null;
 let saving = false;
 let testing = false;
 
@@ -332,8 +335,19 @@ async function copyText(text) {
     document.execCommand("copy");
     textarea.remove();
   }
-  message = t("copied");
-  messageTone = "success";
+  showToast(t("copied"), "success");
+}
+
+function showToast(text, tone = "success") {
+  toast = text;
+  toastTone = tone;
+  if (toastTimer !== null) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast = "";
+    toastTone = "";
+    toastTimer = null;
+    render();
+  }, 1800);
   render();
 }
 
@@ -499,6 +513,7 @@ function render() {
       <section class="workspace">
         ${renderActiveView()}
       </section>
+      ${toast ? `<div class="admin-toast ${toastTone === "error" ? "is-error" : "is-success"}" role="status">${escapeHtml(toast)}</div>` : ""}
     </main>
   `;
   bindEvents();
