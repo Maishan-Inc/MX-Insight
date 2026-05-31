@@ -211,6 +211,34 @@ function extractOpenAiText(value) {
     : "";
 }
 
+function extractOpenAiDeltaText(value) {
+  if (typeof value !== "object" || value === null) return "";
+  const choices = value.choices;
+  return Array.isArray(choices)
+    ? choices
+        .map((choice) => {
+          if (typeof choice !== "object" || choice === null) return "";
+          const delta = choice.delta;
+          if (typeof delta !== "object" || delta === null) return "";
+          const content = delta.content;
+          return typeof content === "string"
+            ? content
+            : Array.isArray(content)
+              ? content.map((part) => (typeof part === "object" && part !== null && typeof part.text === "string" ? part.text : "")).join("")
+              : "";
+        })
+        .join("")
+    : "";
+}
+
+function extractOpenAiError(value) {
+  if (typeof value !== "object" || value === null) return "";
+  const error = value.error;
+  if (typeof error === "string") return error;
+  if (typeof error !== "object" || error === null) return "";
+  return typeof error.message === "string" ? error.message : JSON.stringify(error);
+}
+
 function stripFence(text) {
   const trimmed = text.trim();
   return trimmed.startsWith("```")
@@ -523,6 +551,92 @@ function looksBrokenJson(error) {
   return error instanceof Error && /JSON|Unterminated string|Unexpected end|Unexpected token|格式损坏|被截断/i.test(error.message);
 }
 
+function buildOpenAiChatBody(model, target, image, ratio, compact = false, stream = false) {
+  return {
+    model,
+    temperature: 0.18,
+    max_tokens: compact ? 3600 : 2600,
+    stream,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") },
+          { type: "image_url", image_url: { url: toDataUrl(image.mimeType, image.data) } },
+        ],
+      },
+    ],
+  };
+}
+
+async function readOpenAiStream(response) {
+  if (!response.body) throw new Error("接口没有返回可读取的流式内容。");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let output = "";
+
+  const consumeLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.startsWith("data:")) return false;
+    const data = trimmed.slice(5).trim();
+    if (!data) return false;
+    if (data === "[DONE]") return true;
+    let event;
+    try {
+      event = JSON.parse(data);
+    } catch {
+      return false;
+    }
+    const error = extractOpenAiError(event);
+    if (error) throw new Error(`分析请求失败：${error}`);
+    output += extractOpenAiDeltaText(event);
+    return false;
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      if (consumeLine(line)) return output.trim();
+    }
+    if (done) break;
+  }
+
+  if (buffer && consumeLine(buffer)) return output.trim();
+  return output.trim();
+}
+
+function parseOpenAiStreamText(text) {
+  let output = "";
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.startsWith("data:")) continue;
+    const data = trimmed.slice(5).trim();
+    if (!data || data === "[DONE]") continue;
+    let event;
+    try {
+      event = JSON.parse(data);
+    } catch {
+      continue;
+    }
+    const error = extractOpenAiError(event);
+    if (error) throw new Error(`分析请求失败：${error}`);
+    output += extractOpenAiDeltaText(event);
+  }
+  return output.trim();
+}
+
+function parseOpenAiResponseText(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("data:")) return parseOpenAiStreamText(trimmed);
+  return extractOpenAiText(JSON.parse(trimmed));
+}
+
 async function callGemini(config, target, image, ratio, compact = false) {
   const url = `${trimUrl(config.baseUrl)}/models/${config.model.trim()}:generateContent?key=${encodeURIComponent(config.apiKey.trim())}`;
   let payload;
@@ -564,43 +678,53 @@ async function callGemini(config, target, image, ratio, compact = false) {
 async function callOpenAICompatible(config, target, image, ratio, compact = false) {
   const url = `${trimUrl(config.baseUrl)}/chat/completions`;
   const model = modelName(config);
-  let payload;
+  const body = buildOpenAiChatBody(model, target, image, ratio, compact, true);
+  let text;
   try {
-    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+    text = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
       const response = await fetch(url, {
         signal,
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "text/event-stream, application/json",
           Authorization: `Bearer ${config.apiKey.trim()}`,
         },
-        body: JSON.stringify({
-          model,
-          temperature: 0.18,
-          max_tokens: compact ? 3600 : 2600,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: buildPrompt(target, ratio, compact ? "compact-retry" : "full") },
-                { type: "image_url", image_url: { url: toDataUrl(image.mimeType, image.data) } },
-              ],
-            },
-          ],
-        }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         const body = await response.text();
         throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
       }
-      return response.json();
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.toLowerCase().includes("text/event-stream")) return readOpenAiStream(response);
+      return parseOpenAiResponseText(await response.text());
     });
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("分析请求失败")) throw error;
-    throw requestError("analysis", config, error);
+    try {
+      const payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+        const response = await fetch(url, {
+          signal,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey.trim()}`,
+          },
+          body: JSON.stringify(buildOpenAiChatBody(model, target, image, ratio, compact, false)),
+        });
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+        }
+        return response.json();
+      });
+      text = extractOpenAiText(payload);
+    } catch (fallbackError) {
+      if (fallbackError instanceof Error && fallbackError.message.startsWith("分析请求失败")) throw fallbackError;
+      throw requestError("analysis", config, fallbackError);
+    }
   }
-  return extractJson(extractOpenAiText(payload));
+  return extractJson(text);
 }
 
 async function analyze(config, target) {
