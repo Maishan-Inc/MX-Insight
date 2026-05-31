@@ -74,6 +74,10 @@ const TEXT = {
     language: "語言",
     toggleError: "切換失敗，請稍後重試。",
     panelError: "分析失敗，請稍後重試。",
+    taskProgress: "反推進度",
+    taskDone: "完成",
+    taskError: "失敗",
+    taskRunning: "進行中",
   },
   ja: {
     badge: "プロンプト分析",
@@ -84,12 +88,16 @@ const TEXT = {
     disabledCopy: "ページ上のホバー操作と画像分析は停止中です。",
     uploadImage: "画像を分析",
     analyzing: "分析中...",
-    uploadSaved: "ローカル履歴に保存しました。",
+    uploadSaved: "逆引きタスクを開始しました。逆引き記録で進行状況を確認できます。",
     viewRecords: "逆引き記録",
     settings: "設定",
     language: "言語",
     toggleError: "切り替えに失敗しました。",
     panelError: "分析に失敗しました。",
+    taskProgress: "進行状況",
+    taskDone: "完了",
+    taskError: "失敗",
+    taskRunning: "実行中",
   },
 };
 
@@ -244,6 +252,21 @@ function taskLabel(status) {
   return t("taskRunning");
 }
 
+function taskStep(task) {
+  const map = {
+    queued: { en: "Queued", "zh-CN": "已加入后台任务", "zh-TW": "已加入後台任務", ja: "バックグラウンドに追加済み" },
+    readImage: { en: "Reading image", "zh-CN": "读取图片", "zh-TW": "讀取圖片", ja: "画像を読み込み中" },
+    sendModel: { en: "Sending to model", "zh-CN": "发送至模型", "zh-TW": "發送至模型", ja: "モデルへ送信中" },
+    modelWorking: { en: "Model is generating", "zh-CN": "模型生成中", "zh-TW": "模型生成中", ja: "モデル生成中" },
+    generatePrompt: { en: "Generating prompt", "zh-CN": "生成提示词", "zh-TW": "生成提示詞", ja: "プロンプト生成中" },
+    retryJson: { en: "Checking output, retrying", "zh-CN": "校验输出，正在重试", "zh-TW": "校驗輸出，正在重試", ja: "出力確認、再試行中" },
+    prepare: { en: "Preparing analysis", "zh-CN": "准备分析", "zh-TW": "準備分析", ja: "分析準備中" },
+    complete: { en: "Reverse prompt complete", "zh-CN": "反推完成", "zh-TW": "反推完成", ja: "逆引き完了" },
+    failed: { en: "Reverse prompt failed", "zh-CN": "反推失败", "zh-TW": "反推失敗", ja: "逆引き失敗" },
+  };
+  return map[task?.stepKey]?.[detectLanguage()] || task?.step || task?.title || "";
+}
+
 function renderTasks() {
   const tasks = reverseTasks.slice(0, 3);
   if (!tasks.length) return "";
@@ -258,7 +281,7 @@ function renderTasks() {
               <strong>${progress}%</strong>
             </div>
             <div class="task-progress"><span style="width:${progress}%"></span></div>
-            <p>${escapeHtml(task.error || task.step || task.title || "")}</p>
+            <p>${escapeHtml(task.error || taskStep(task))}</p>
           </article>
         `;
       }).join("")}

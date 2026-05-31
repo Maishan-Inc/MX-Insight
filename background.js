@@ -853,27 +853,45 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
 
 async function analyze(config, target, onProgress) {
   validateConfig(config);
-  await onProgress?.({ progress: 18, step: "读取图片" });
+  await onProgress?.({ progress: 18, stepKey: "readImage", step: "读取图片" });
   const image = await readImagePayload(target);
-  await onProgress?.({ progress: 42, step: "发送至模型" });
+  await onProgress?.({ progress: 42, stepKey: "sendModel", step: "发送至模型" });
   const ratio = aspectRatio(target);
+  let modelProgress = 42;
+  let heartbeat = null;
+  const startModelHeartbeat = () => {
+    heartbeat = setInterval(() => {
+      modelProgress = Math.min(88, modelProgress + (modelProgress < 70 ? 4 : 2));
+      onProgress?.({ progress: modelProgress, stepKey: "modelWorking", step: "模型生成中" });
+    }, 3500);
+  };
+  const stopModelHeartbeat = () => {
+    if (heartbeat !== null) clearInterval(heartbeat);
+    heartbeat = null;
+  };
 
   try {
+    startModelHeartbeat();
     const analysis = providerKind(config.baseUrl) === "gemini"
       ? await callGemini(config, target, image, ratio)
       : await callOpenAICompatible(config, target, image, ratio);
-    await onProgress?.({ progress: 92, step: "生成提示词" });
+    stopModelHeartbeat();
+    await onProgress?.({ progress: 92, stepKey: "generatePrompt", step: "生成提示词" });
     return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
   } catch (error) {
+    stopModelHeartbeat();
     if (!looksBrokenJson(error)) throw error;
     try {
-      await onProgress?.({ progress: 78, step: "校验输出，正在重试" });
+      await onProgress?.({ progress: 78, stepKey: "retryJson", step: "校验输出，正在重试" });
+      startModelHeartbeat();
       const analysis = providerKind(config.baseUrl) === "gemini"
         ? await callGemini(config, target, image, ratio, true)
         : await callOpenAICompatible(config, target, image, ratio, true);
-      await onProgress?.({ progress: 94, step: "生成提示词" });
+      stopModelHeartbeat();
+      await onProgress?.({ progress: 94, stepKey: "generatePrompt", step: "生成提示词" });
       return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
     } catch (retryError) {
+      stopModelHeartbeat();
       throw new Error(
         `模型返回的 JSON 仍然不完整，已自动重试一次但还是失败。请稍后重试，或改用输出更稳定的模型。${retryError instanceof Error ? retryError.message : "unknown error"}`,
       );
@@ -1140,23 +1158,38 @@ async function startAnalysisTask(rawTarget, options = {}) {
     imageSrc: target.src,
     pageUrl: target.pageUrl,
     progress: 5,
+    stepKey: "queued",
     step: "已加入后台任务",
     error: "",
     createdAt,
   });
 
   (async () => {
+    let timeoutId = null;
     try {
+      timeoutId = setTimeout(() => {
+        upsertTask({
+          id: taskId,
+          status: "error",
+          progress: 100,
+          stepKey: "failed",
+          step: "反推超时",
+          error: "反推任务超过 4 分钟仍未完成，请检查模型服务响应或稍后重试。",
+          completedAt: Date.now(),
+        });
+      }, ANALYSIS_REQUEST_TIMEOUT_MS + IMAGE_FETCH_TIMEOUT_MS + 30000);
       const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
-      await upsertTask({ id: taskId, status: "running", progress: 10, step: "准备分析", error: "" });
+      await upsertTask({ id: taskId, status: "running", progress: 10, stepKey: "prepare", step: "准备分析", error: "" });
       const analysis = await analyze(config, target, (progress) => (
         upsertTask({ id: taskId, status: "running", error: "", ...progress })
       ));
+      if (timeoutId !== null) clearTimeout(timeoutId);
       const record = await saveReversePromptAnalysis(target, analysis, taskId);
       await upsertTask({
         id: taskId,
         status: "success",
         progress: 100,
+        stepKey: "complete",
         step: "反推完成",
         error: "",
         recordId: record.id,
@@ -1164,10 +1197,12 @@ async function startAnalysisTask(rawTarget, options = {}) {
         completedAt: Date.now(),
       });
     } catch (error) {
+      if (timeoutId !== null) clearTimeout(timeoutId);
       await upsertTask({
         id: taskId,
         status: "error",
         progress: 100,
+        stepKey: "failed",
         step: "反推失败",
         error: error instanceof Error ? error.message : "分析失败，请稍后重试。",
         completedAt: Date.now(),

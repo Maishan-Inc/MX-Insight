@@ -59,6 +59,15 @@ const TEXT = {
     taskDone: "Completed",
     taskError: "Failed",
     taskRunning: "Running",
+    taskQueued: "Queued",
+    taskReadImage: "Reading image",
+    taskSendModel: "Sending to model",
+    taskModelWorking: "Model is generating",
+    taskGeneratePrompt: "Generating prompt",
+    taskRetryJson: "Checking output, retrying",
+    taskPrepare: "Preparing analysis",
+    taskComplete: "Reverse prompt complete",
+    taskFailed: "Reverse prompt failed",
     delete: "Delete",
     source: "Source",
     uploaded: "Uploaded image",
@@ -104,6 +113,15 @@ const TEXT = {
     taskDone: "已完成",
     taskError: "失败",
     taskRunning: "进行中",
+    taskQueued: "已加入后台任务",
+    taskReadImage: "读取图片",
+    taskSendModel: "发送至模型",
+    taskModelWorking: "模型生成中",
+    taskGeneratePrompt: "生成提示词",
+    taskRetryJson: "校验输出，正在重试",
+    taskPrepare: "准备分析",
+    taskComplete: "反推完成",
+    taskFailed: "反推失败",
     delete: "删除",
     source: "来源",
     uploaded: "上传图片",
@@ -149,6 +167,15 @@ const TEXT = {
     taskDone: "已完成",
     taskError: "失敗",
     taskRunning: "進行中",
+    taskQueued: "已加入後台任務",
+    taskReadImage: "讀取圖片",
+    taskSendModel: "發送至模型",
+    taskModelWorking: "模型生成中",
+    taskGeneratePrompt: "生成提示詞",
+    taskRetryJson: "校驗輸出，正在重試",
+    taskPrepare: "準備分析",
+    taskComplete: "反推完成",
+    taskFailed: "反推失敗",
     delete: "刪除",
     source: "來源",
     uploaded: "上傳圖片",
@@ -190,6 +217,19 @@ const TEXT = {
     historyCopy: "プロンプト本文をクリックするとコピーできます。アップロード画像はアップロード元として表示します。",
     emptyHistory: "逆引き記録はまだありません。",
     clearHistory: "履歴を消去",
+    taskProgress: "タスク進行状況",
+    taskDone: "完了",
+    taskError: "失敗",
+    taskRunning: "実行中",
+    taskQueued: "バックグラウンドに追加済み",
+    taskReadImage: "画像を読み込み中",
+    taskSendModel: "モデルへ送信中",
+    taskModelWorking: "モデル生成中",
+    taskGeneratePrompt: "プロンプト生成中",
+    taskRetryJson: "出力確認、再試行中",
+    taskPrepare: "分析準備中",
+    taskComplete: "逆引き完了",
+    taskFailed: "逆引き失敗",
     delete: "削除",
     source: "出典",
     uploaded: "アップロード画像",
@@ -240,6 +280,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function cssUrl(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "");
 }
 
 function promptFor(entry) {
@@ -342,6 +386,33 @@ function statusLabel(status) {
   if (status === "success") return t("taskDone");
   if (status === "error") return t("taskError");
   return t("taskRunning");
+}
+
+function stepLabel(task) {
+  const map = {
+    queued: "taskQueued",
+    readImage: "taskReadImage",
+    sendModel: "taskSendModel",
+    modelWorking: "taskModelWorking",
+    generatePrompt: "taskGeneratePrompt",
+    retryJson: "taskRetryJson",
+    prepare: "taskPrepare",
+    complete: "taskComplete",
+    failed: "taskFailed",
+  };
+  const raw = String(task?.step || "");
+  const inferred =
+    raw.includes("读取") || raw.includes("讀取") ? "readImage" :
+    raw.includes("发送") || raw.includes("發送") ? "sendModel" :
+    raw.includes("模型生成") ? "modelWorking" :
+    raw.includes("生成提示") ? "generatePrompt" :
+    raw.includes("重试") || raw.includes("重試") ? "retryJson" :
+    raw.includes("准备") || raw.includes("準備") ? "prepare" :
+    raw.includes("完成") ? "complete" :
+    raw.includes("失败") || raw.includes("失敗") ? "failed" :
+    raw.includes("后台") || raw.includes("後台") ? "queued" :
+    "";
+  return t(map[task?.stepKey || inferred] || "") || raw;
 }
 
 async function copyText(text) {
@@ -476,15 +547,13 @@ function renderSettingsView() {
 }
 
 function renderHistory() {
-  const visibleTasks = reverseTasks.slice(0, 12);
+  const visibleTasks = reverseTasks.slice(0, 40);
   const taskRows = visibleTasks.map((task) => {
     const progress = Math.max(0, Math.min(100, Math.round(Number(task.progress) || 0)));
     const tone = task.status === "error" ? " is-error" : task.status === "success" ? " is-success" : "";
     return `
       <article class="task-card${tone}">
-        <div class="task-thumb">
-          ${task.imageSrc ? `<img src="${escapeHtml(task.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : ""}
-        </div>
+        ${task.imageSrc ? `<img class="task-thumb" src="${escapeHtml(task.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : `<span class="task-thumb"></span>`}
         <div class="task-body">
           <div class="record-meta">
             <span>${escapeHtml(statusLabel(task.status))}</span>
@@ -494,7 +563,7 @@ function renderHistory() {
           <div class="task-progress" aria-label="${escapeHtml(t("taskProgress"))}">
             <span style="width:${progress}%"></span>
           </div>
-          <p class="${task.status === "error" ? "message-error" : ""}">${escapeHtml(task.error || task.step || "")}</p>
+          <p class="${task.status === "error" ? "message-error" : ""}">${escapeHtml(task.error || stepLabel(task))}</p>
         </div>
       </article>
     `;
@@ -507,7 +576,7 @@ function renderHistory() {
     const sourceIsLink = source !== t("uploaded");
     return `
       <article class="record-card">
-        <div class="record-image-shell">
+        <div class="record-image-shell" ${entry.imageSrc ? `style="--preview-src: url(&quot;${escapeHtml(cssUrl(entry.imageSrc))}&quot;)"` : ""}>
           ${entry.imageSrc ? `<img src="${escapeHtml(entry.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-record-img />` : ""}
           <span class="record-image-fallback">${escapeHtml(t("imageUnavailable"))}</span>
         </div>
@@ -531,7 +600,7 @@ function renderHistory() {
   }).join("");
 
   return `
-    <section class="view-stack">
+    <section class="history-layout">
       <section class="page-title">
         <div>
           <p class="eyebrow">${escapeHtml(t("historyTitle"))}</p>
@@ -542,14 +611,16 @@ function renderHistory() {
           ${escapeHtml(t("clearHistory"))}
         </button>
       </section>
-      ${taskRows ? `
-        <section class="task-list" aria-label="${escapeHtml(t("taskProgress"))}">
-          ${taskRows}
-        </section>
-      ` : ""}
-      <div class="record-grid">
-        ${rows || `<p class="empty-state">${escapeHtml(t("emptyHistory"))}</p>`}
-      </div>
+      <section class="history-pane task-pane" aria-label="${escapeHtml(t("taskProgress"))}">
+        <div class="task-list">
+          ${taskRows || `<p class="empty-state">${escapeHtml(t("emptyHistory"))}</p>`}
+        </div>
+      </section>
+      <section class="history-pane record-pane">
+        <div class="record-grid">
+          ${rows || `<p class="empty-state">${escapeHtml(t("emptyHistory"))}</p>`}
+        </div>
+      </section>
     </section>
   `;
 }
