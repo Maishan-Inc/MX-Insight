@@ -4,10 +4,13 @@ const SETTINGS_KEY = "enabled";
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
 const IMAGE_FETCH_TIMEOUT_MS = 30000;
-const ANALYSIS_REQUEST_TIMEOUT_MS = 120000;
+const ANALYSIS_REQUEST_TIMEOUT_MS = 180000;
 const TEST_REQUEST_TIMEOUT_MS = 20000;
-const OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS = 1800;
-const OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS = 1400;
+const OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS = 5200;
+const OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS = 3600;
+const MAX_IMAGE_SIDE = 2200;
+const HISTORY_PREVIEW_MAX_SIDE = 720;
+const JPEG_QUALITY = 0.92;
 
 const GENERATOR_SITES = {
   jimeng: "https://jimeng.jianying.com/",
@@ -17,70 +20,89 @@ const GENERATOR_SITES = {
 };
 
 const SYSTEM_PROMPT = [
-  "You are an extremely rigorous visual analyst, cinematography analyst, and prompt engineer.",
-  "Produce concise, visually grounded prompt output for every supported model provider.",
+  "You are an elite reverse-prompt analyst for AI-generated and highly-stylized images.",
+  "Your job is to reconstruct the most likely original image-generation prompt as faithfully as possible from visible evidence.",
+  "Your output should help another image model recreate the source image with close visual fidelity.",
   "Return valid JSON only and follow the requested schema exactly.",
-  "Make zh.prompt, zh_hant.prompt, en.prompt, and ja.prompt production-ready but compact.",
-  "Make json_prompt factual and reconstructable, using compact strings and short arrays.",
-  "Cover subject, composition, details, lighting, color, style, camera language and visible text without long prose.",
-  "Do not hallucinate. When uncertain, mark information as uncertain or approximate.",
+  "Treat this as forensic reconstruction, not creative writing.",
+  "Maximize visual fidelity to the source image and infer the likely prompting logic behind the result.",
+  "Be faithful to visually verifiable facts. Never invent brands, logos, exact text, named artists, camera bodies, lens models, render engines, precise locations, or hidden objects unless clearly visible.",
+  "Do not use generic filler as a replacement for concrete visual description.",
 ].join(" ");
 
 const PROMPT_SCHEMA_TEXT = `
 ${SYSTEM_PROMPT}
 
-You are also preparing multilingual prompt output for image generation.
-Analyze the provided image and return valid JSON only.
+Analyze the provided image and output reverse-prompt JSON with reconstruction prompts.
+Prioritize accurate visual grounding, compositional logic and likely prompt reconstruction over creativity.
+Make the prompt detailed, concrete, and reproduction-oriented. Avoid short summaries.
 
 The JSON schema:
 {
   "zh": {
-    "prompt": "A highly detailed, production-ready Simplified Chinese image generation prompt, ordered as: Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Style/Camera, Colors, Materials, Aspect Ratio.",
-    "analysis": "A compact Simplified Chinese explanation that covers the same fields, with extra attention on style and camera language."
+    "prompt": "A dense, visually grounded Simplified Chinese reconstruction prompt ordered as Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Composition/Framing, Style/Camera, Colors, Materials, Aspect Ratio, Quality/Finish, Likely Generation Intent.",
+    "analysis": "A short Simplified Chinese explanation covering the same fields, with extra attention on composition, style and camera language."
   },
   "zh_hant": {
-    "prompt": "A highly detailed, production-ready Traditional Chinese image generation prompt, ordered as: Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Style/Camera, Colors, Materials, Aspect Ratio.",
-    "analysis": "A compact Traditional Chinese explanation that covers the same fields, with extra attention on style and camera language."
+    "prompt": "A dense, visually grounded Traditional Chinese reconstruction prompt ordered as Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Composition/Framing, Style/Camera, Colors, Materials, Aspect Ratio, Quality/Finish, Likely Generation Intent.",
+    "analysis": "A short Traditional Chinese explanation covering the same fields, with extra attention on composition, style and camera language."
   },
   "en": {
-    "prompt": "A highly detailed, production-ready English image generation prompt, ordered as: Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Style/Camera, Colors, Materials, Aspect Ratio.",
-    "analysis": "A compact English explanation that covers the same fields, with extra attention on style and camera language."
+    "prompt": "A dense, visually grounded English reconstruction prompt ordered as Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Composition/Framing, Style/Camera, Colors, Materials, Aspect Ratio, Quality/Finish, Likely Generation Intent.",
+    "analysis": "A short English explanation covering the same fields, with extra attention on composition, style and camera language."
   },
   "ja": {
-    "prompt": "A highly detailed, production-ready Japanese image generation prompt, ordered as: Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Style/Camera, Colors, Materials, Aspect Ratio.",
-    "analysis": "A compact Japanese explanation that covers the same fields, with extra attention on style and camera language."
+    "prompt": "A dense, visually grounded Japanese reconstruction prompt ordered as Subject, Action/Pose, Details/Appearance, Environment/Background, Lighting/Atmosphere, Composition/Framing, Style/Camera, Colors, Materials, Aspect Ratio, Quality/Finish, Likely Generation Intent.",
+    "analysis": "A short Japanese explanation covering the same fields, with extra attention on composition, style and camera language."
   },
-  "zh_style_tags": ["中文标签1", "中文标签2", "中文标签3"],
-  "zh_hant_style_tags": ["繁中標籤1", "繁中標籤2", "繁中標籤3"],
-  "en_style_tags": ["english tag 1", "english tag 2", "english tag 3"],
-  "ja_style_tags": ["日本語タグ1", "日本語タグ2", "日本語タグ3"],
+  "zh_style_tags": ["中文标签1", "中文标签2", "中文标签3", "中文标签4"],
+  "zh_hant_style_tags": ["繁中標籤1", "繁中標籤2", "繁中標籤3", "繁中標籤4"],
+  "en_style_tags": ["english tag 1", "english tag 2", "english tag 3", "english tag 4"],
+  "ja_style_tags": ["日本語タグ1", "日本語タグ2", "日本語タグ3", "日本語タグ4"],
   "json_prompt": {
-    "subject": "Main subject.",
-    "action_pose": "Action or pose.",
-    "details_appearance": "Details, clothing, appearance, accessories or visible design details.",
-    "environment_background": "Environment or background.",
-    "lighting_atmosphere": "Lighting and atmosphere.",
-    "style_camera": "Art style, design language, camera or lens feeling, and technical visual cues.",
-    "colors": ["primary color"],
-    "materials": ["material 1"],
+    "subject": "Main subject with count, type, scale, identity category and the most visually important attributes.",
+    "action_pose": "Action, pose, gesture, gaze, orientation, body language or object placement.",
+    "details_appearance": "Specific visible details, clothing, anatomy, props, accessories, markings, silhouette, condition or design cues.",
+    "environment_background": "Environment, set, backdrop, foreground/midground/background relationship, depth cues and surrounding objects.",
+    "lighting_atmosphere": "Lighting direction, source quality, contrast, shadow softness, color temperature, mood, weather or atmospheric effects.",
+    "composition_framing": "Shot distance, angle, crop, subject placement, negative space, perspective, focal emphasis and framing logic.",
+    "style_camera": "Visual medium, aesthetic style, realism/stylization level, camera or lens feel, render/paint/photographic finish and post-processing cues.",
+    "colors": ["primary color", "secondary color", "accent color"],
+    "materials": ["material 1", "material 2", "surface finish"],
     "aspect_ratio": "4:5",
-    "...any_extra_nested_fields_you_need": {}
+    "quality_modifiers": ["output quality cue 1", "output quality cue 2", "finish cue"],
+    "likely_generation_intent": "What the original creator was likely optimizing for."
   },
+  "recreation_prompt": "A long, polished, single-line English recreation prompt that aims to reproduce the source image as closely as possible, with dense visual details and no filler.",
+  "prompt_core": "A shorter reusable English core prompt with the most important visual ingredients, preserving subject, composition, lighting, style and palette.",
+  "negative_prompt": "An English negative prompt that removes common artifacts while staying compatible with the observed style.",
   "confidence": 0.0
 }
 
 Rules:
 - Return JSON only. No markdown fences.
-- Keep prompts directly usable for Midjourney, Flux or SDXL style generation.
-- All prompt fields should be highly detailed, information-dense, and still directly usable without extra rewriting.
-- Be faithful to visually verifiable facts. Do not invent unseen objects, brands, text, camera specs, materials, art movements or lighting setups.
-- If something is uncertain, use broader wording instead of hallucinating specifics.
-- json_prompt is the strictest part of the output. It can use nested objects and arrays, but prefer compact factual phrases instead of long prose.
-- json_prompt must always preserve these exact top-level baseline keys:
-  subject, action_pose, details_appearance, environment_background, lighting_atmosphere, style_camera, colors, materials, aspect_ratio
-- Beyond those baseline keys, add only the extra fields that materially help reconstruction, such as overview, composition, layout, text, constraints and uncertainties.
-- The style/camera part should be richer than before: describe design language, era influence, medium, finish, camera angle, lens feel, framing logic and aesthetic cues when they are visually supported.
-- Return 4 to 6 concise style tags for each supported language.
+- Treat this as forensic reconstruction, not creative writing.
+- Maximize visual fidelity to the source image and infer the likely prompting logic behind the result.
+- Be faithful to visually verifiable facts. Never invent brands, logos, exact text, named artists, camera bodies, lens models, render engines, precise locations, or hidden objects unless clearly visible.
+- If a detail is uncertain, use broader but still useful wording.
+- Do not use generic filler such as "highly detailed" or "masterpiece" as a replacement for concrete visual description.
+- zh.prompt, zh_hant.prompt, en.prompt and ja.prompt must be natural readable paragraphs, not field-labeled lists.
+- Each language prompt must be detailed enough for image recreation: target 90 to 150 English words or equivalent density in the target language.
+- recreation_prompt must be the most complete output: target 130 to 220 English words in one polished line.
+- Describe visible foreground, midground and background relationships when present.
+- Capture subject count, identity category, pose, gesture, gaze, expression, clothing or object design, materials, textures, surface finish, weathering, and small distinctive details.
+- For magazine, poster or ad layouts, always describe masthead/title text, main title position, side/bottom small text, barcode/price/date blocks, subject-to-title overlap, subject scale, background layers, clothing material, makeup/hair, lighting and color system when visible.
+- Capture lighting direction, shadow softness, contrast, color temperature, atmosphere, depth, lens feel, camera angle, shot distance, crop, focal emphasis, and aspect ratio.
+- If the image is simple, expand on spatial placement, proportions, edges, textures, lighting, palette, and finish instead of inventing new objects.
+- Return exactly 4 concise style tags in each language.
+- Keep English style tags short enough for compact UI pills: 1 to 3 words, ideally under 24 characters.
+- Keep structured categories only inside json_prompt.
+- Language fields must not be mixed up:
+  - zh.prompt, zh.analysis and zh_style_tags must be Simplified Chinese.
+  - zh_hant.prompt, zh_hant.analysis and zh_hant_style_tags must be Traditional Chinese.
+  - en.prompt, en.analysis and en_style_tags must be English.
+  - ja.prompt, ja.analysis and ja_style_tags must be Japanese.
+  - json_prompt, recreation_prompt, prompt_core and negative_prompt must be English.
 - Confidence must be a number between 0 and 1.
 `.trim();
 
@@ -119,10 +141,13 @@ const RESPONSE_SCHEMA = {
         details_appearance: { type: "string" },
         environment_background: { type: "string" },
         lighting_atmosphere: { type: "string" },
+        composition_framing: { type: "string" },
         style_camera: { type: "string" },
         colors: { type: "array", items: { type: "string" } },
         materials: { type: "array", items: { type: "string" } },
         aspect_ratio: { type: "string" },
+        quality_modifiers: { type: "array", items: { type: "string" } },
+        likely_generation_intent: { type: "string" },
       },
       additionalProperties: true,
       required: [
@@ -131,15 +156,35 @@ const RESPONSE_SCHEMA = {
         "details_appearance",
         "environment_background",
         "lighting_atmosphere",
+        "composition_framing",
         "style_camera",
         "colors",
         "materials",
         "aspect_ratio",
+        "quality_modifiers",
+        "likely_generation_intent",
       ],
     },
+    recreation_prompt: { type: "string" },
+    prompt_core: { type: "string" },
+    negative_prompt: { type: "string" },
     confidence: { type: "number" },
   },
-  required: ["zh", "zh_hant", "en", "ja", "zh_style_tags", "zh_hant_style_tags", "en_style_tags", "ja_style_tags", "json_prompt", "confidence"],
+  required: [
+    "zh",
+    "zh_hant",
+    "en",
+    "ja",
+    "zh_style_tags",
+    "zh_hant_style_tags",
+    "en_style_tags",
+    "ja_style_tags",
+    "json_prompt",
+    "recreation_prompt",
+    "prompt_core",
+    "negative_prompt",
+    "confidence",
+  ],
 };
 
 function trimUrl(value) {
@@ -298,10 +343,13 @@ function parseJsonPrompt(value) {
     detailsAppearance: firstString(source, "details_appearance", "detailsAppearance"),
     environmentBackground: firstString(source, "environment_background", "environmentBackground"),
     lightingAtmosphere: firstString(source, "lighting_atmosphere", "lightingAtmosphere"),
+    compositionFraming: firstString(source, "composition_framing", "compositionFraming"),
     styleCamera: firstString(source, "style_camera", "styleCamera"),
     colors: arrayFrom(source, "colors"),
     materials: arrayFrom(source, "materials"),
     aspectRatio: firstString(source, "aspect_ratio", "aspectRatio"),
+    qualityModifiers: arrayFrom(source, "quality_modifiers", "qualityModifiers"),
+    likelyGenerationIntent: firstString(source, "likely_generation_intent", "likelyGenerationIntent"),
     raw,
   };
 }
@@ -323,6 +371,38 @@ function parseTags(value) {
   return { zh: fallback, zhHant: fallback, en: fallback, ja: fallback };
 }
 
+function countMatches(text, pattern) {
+  return text.match(pattern)?.length || 0;
+}
+
+function hasChineseText(text) {
+  const chinese = countMatches(text, /[\u4e00-\u9fff]/g);
+  const japanese = countMatches(text, /[\u3040-\u30ff]/g);
+  return chinese >= 8 && japanese <= Math.max(2, Math.floor(chinese * 0.12));
+}
+
+function hasEnglishText(text) {
+  const latin = countMatches(text, /[A-Za-z]/g);
+  const cjk = countMatches(text, /[\u3040-\u30ff\u4e00-\u9fff]/g);
+  return latin >= 24 && latin >= cjk * 2;
+}
+
+function hasJapaneseText(text) {
+  return countMatches(text, /[\u3040-\u30ff]/g) >= 6;
+}
+
+function tagsAreChinese(tags) {
+  return tags.length > 0 && tags.every((tag) => countMatches(tag, /[\u4e00-\u9fff]/g) > 0 && countMatches(tag, /[\u3040-\u30ff]/g) === 0);
+}
+
+function tagsAreEnglish(tags) {
+  return tags.length > 0 && tags.every((tag) => countMatches(tag, /[A-Za-z]/g) > 0 && countMatches(tag, /[\u3040-\u30ff\u4e00-\u9fff]/g) === 0);
+}
+
+function tagsAreJapanese(tags) {
+  return tags.length > 0 && tags.every((tag) => countMatches(tag, /[\u3040-\u30ff]/g) > 0 || (countMatches(tag, /[\u4e00-\u9fff]/g) > 0 && countMatches(tag, /[A-Za-z]/g) === 0));
+}
+
 function parseResponse(value) {
   if (typeof value !== "object" || value === null) throw new Error("模型返回的数据格式无效。");
   const payload = value;
@@ -341,7 +421,7 @@ function parseResponse(value) {
 
   const score = typeof confidence === "number" && Number.isFinite(confidence) ? Math.min(1, Math.max(0, confidence)) : void 0;
 
-  return {
+  const parsed = {
     zh: { prompt: zh.prompt.trim(), analysis: zh.analysis.trim() },
     zhHant: { prompt: zhHant.prompt.trim(), analysis: zhHant.analysis.trim() },
     zh_hant: { prompt: zhHant.prompt.trim(), analysis: zhHant.analysis.trim() },
@@ -349,8 +429,24 @@ function parseResponse(value) {
     ja: { prompt: ja.prompt.trim(), analysis: ja.analysis.trim() },
     jsonPrompt: parseJsonPrompt(jsonPrompt),
     styleTags: parseTags(payload),
+    recreationPrompt: typeof payload.recreation_prompt === "string" ? payload.recreation_prompt.trim() : "",
+    promptCore: typeof payload.prompt_core === "string" ? payload.prompt_core.trim() : "",
+    negativePrompt: typeof payload.negative_prompt === "string" ? payload.negative_prompt.trim() : "",
     confidence: score,
   };
+
+  if (
+    !hasChineseText(`${parsed.zh.prompt}\n${parsed.zh.analysis}`) ||
+    !hasEnglishText(`${parsed.en.prompt}\n${parsed.en.analysis}`) ||
+    !hasJapaneseText(`${parsed.ja.prompt}\n${parsed.ja.analysis}`) ||
+    !tagsAreChinese(parsed.styleTags.zh.slice(0, 4)) ||
+    !tagsAreEnglish(parsed.styleTags.en.slice(0, 4)) ||
+    !tagsAreJapanese(parsed.styleTags.ja.slice(0, 4))
+  ) {
+    throw new Error("模型返回的多语言字段混乱。");
+  }
+
+  return parsed;
 }
 
 function validateConfig(config) {
@@ -419,7 +515,7 @@ function normalizeMime(mimeType) {
   return lower === "image/jpg" ? "image/jpeg" : lower;
 }
 
-async function convertImageToPng(bytes, sourceMimeType) {
+async function reencodeImageToJpeg(bytes, sourceMimeType, maxSide = MAX_IMAGE_SIDE, quality = JPEG_QUALITY) {
   if (typeof createImageBitmap !== "function" || typeof OffscreenCanvas !== "function") {
     throw new Error("当前浏览器无法转换该图片格式，请换用 JPEG、PNG、GIF 或 WebP 图片。");
   }
@@ -431,31 +527,44 @@ async function convertImageToPng(bytes, sourceMimeType) {
     throw new Error("图片数据不是有效图片，或当前浏览器无法解码该格式。请换用 JPEG、PNG、GIF 或 WebP 图片。");
   }
   try {
-    const maxSide = 1800;
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
     const canvas = new OffscreenCanvas(width, height);
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("无法创建图片转换上下文。");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
     context.drawImage(bitmap, 0, 0, width, height);
-    const output = await canvas.convertToBlob({ type: "image/png" });
+    const output = await canvas.convertToBlob({ type: "image/jpeg", quality });
     const buffer = await output.arrayBuffer();
-    return { mimeType: "image/png", data: bytesToBase64(new Uint8Array(buffer)) };
+    return { mimeType: "image/jpeg", data: bytesToBase64(new Uint8Array(buffer)) };
   } finally {
     bitmap.close?.();
+  }
+}
+
+async function createHistoryPreview(bytes, mimeType) {
+  try {
+    const detected = detectMime(bytes);
+    const declared = normalizeMime(mimeType);
+    if (!((detected && detected.startsWith("image/")) || declared.startsWith("image/"))) return "";
+    const preview = await reencodeImageToJpeg(bytes, detected || declared, HISTORY_PREVIEW_MAX_SIDE, 0.82);
+    return toDataUrl(preview.mimeType, preview.data);
+  } catch {
+    return "";
   }
 }
 
 async function normalizeImagePayload(bytes, mimeType) {
   if (!bytes.length) throw new Error("图片数据为空，请换一张图片再试。");
   const detected = detectMime(bytes);
-  if (detected && OPENAI_CHAT_IMAGE_MIMES.has(detected)) {
-    return { mimeType: detected, data: bytesToBase64(bytes) };
-  }
   const declared = normalizeMime(mimeType);
   if ((detected && detected.startsWith("image/")) || declared.startsWith("image/")) {
-    return convertImageToPng(bytes, detected || declared);
+    return reencodeImageToJpeg(bytes, detected || declared);
+  }
+  if (detected && OPENAI_CHAT_IMAGE_MIMES.has(detected)) {
+    return { mimeType: detected, data: bytesToBase64(bytes) };
   }
   throw new Error("图片抓取结果不是有效图片，请换一张允许直接访问的网页图片。");
 }
@@ -487,7 +596,9 @@ async function readImagePayload(target) {
   const dataUrl = parseDataUrl(target.src);
   if (dataUrl) {
     const bytes = base64ToBytes(dataUrl.data);
-    return normalizeImagePayload(bytes, dataUrl.mimeType);
+    const image = await normalizeImagePayload(bytes, dataUrl.mimeType);
+    const previewSrc = await createHistoryPreview(bytes, dataUrl.mimeType);
+    return { ...image, previewSrc };
   }
   const bytesAndType = await withTimeout(IMAGE_FETCH_TIMEOUT_MS, "图片抓取超时（30 秒），请换一张允许直接访问的网页图片。", async (signal) => {
     const response = await fetch(target.src, {
@@ -502,28 +613,25 @@ async function readImagePayload(target) {
     return { bytes: new Uint8Array(buffer), mimeType: blob.type };
   });
   const bytes = bytesAndType.bytes;
-  return normalizeImagePayload(bytes, bytesAndType.mimeType);
+  const image = await normalizeImagePayload(bytes, bytesAndType.mimeType);
+  const previewSrc = await createHistoryPreview(bytes, bytesAndType.mimeType);
+  return { ...image, previewSrc };
 }
 
 function buildPrompt(target, ratio, mode = "full") {
   const base = [
-    SYSTEM_PROMPT,
+    PROMPT_SCHEMA_TEXT,
     "",
-    "Analyze the provided image and return valid JSON only.",
-    "",
-    "Return exactly this JSON shape and no other text:",
-    '{"zh":{"prompt":"","analysis":""},"zh_hant":{"prompt":"","analysis":""},"en":{"prompt":"","analysis":""},"ja":{"prompt":"","analysis":""},"zh_style_tags":[],"zh_hant_style_tags":[],"en_style_tags":[],"ja_style_tags":[],"json_prompt":{"subject":"","action_pose":"","details_appearance":"","environment_background":"","lighting_atmosphere":"","style_camera":"","colors":[],"materials":[],"aspect_ratio":""},"confidence":0.0}',
-    "",
-    "Keep every prompt field under 120 words.",
-    "Keep every analysis field under 45 words.",
-    "Use 4 to 6 short style tags per language.",
-    "Keep json_prompt values compact and factual.",
+    "Analyze this image and output multilingual reverse-prompt JSON with recreation_prompt, prompt_core and negative_prompt.",
+    "Prioritize accurate visual grounding, compositional logic and likely prompt reconstruction over creativity.",
+    "Make the prompt detailed, concrete, and reproduction-oriented. Avoid short summaries.",
   ];
 
   if (mode === "compact-retry") {
     base.push(
       "Your previous attempt was malformed or truncated JSON. Regenerate from scratch as valid JSON only.",
-      "Use shorter prompt fields and avoid repeated descriptions.",
+      "Preserve the same schema, but keep zh/zh_hant/en/ja prompt fields closer to 80 to 110 English words or equivalent density.",
+      "Keep recreation_prompt under 150 English words.",
       "Do not include markdown, comments, reasoning or explanations outside the JSON object.",
     );
   }
@@ -556,7 +664,7 @@ async function extractJson(text) {
 }
 
 function looksBrokenJson(error) {
-  return error instanceof Error && /JSON|Unterminated string|Unexpected end|Unexpected token|格式损坏|被截断/i.test(error.message);
+  return error instanceof Error && /JSON|Unterminated string|Unexpected end|Unexpected token|格式损坏|被截断|多语言字段混乱/i.test(error.message);
 }
 
 function openAiTokenParam(model) {
@@ -656,7 +764,7 @@ async function callGemini(config, target, image, ratio, compact = false) {
   const url = `${trimUrl(config.baseUrl)}/models/${config.model.trim()}:generateContent?key=${encodeURIComponent(config.apiKey.trim())}`;
   let payload;
   try {
-    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
       const response = await fetch(url, {
         signal,
         method: "POST",
@@ -671,7 +779,7 @@ async function callGemini(config, target, image, ratio, compact = false) {
           ],
           generationConfig: {
             temperature: 0.18,
-            maxOutputTokens: compact ? 3600 : 2600,
+            maxOutputTokens: compact ? OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS : OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS,
             responseMimeType: "application/json",
             responseJsonSchema: RESPONSE_SCHEMA,
           },
@@ -696,7 +804,7 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
   const body = buildOpenAiChatBody(model, target, image, ratio, compact, true);
   let text;
   try {
-    text = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+    text = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
       const response = await fetch(url, {
         signal,
         method: "POST",
@@ -717,7 +825,7 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
     });
   } catch (error) {
     try {
-      const payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（120 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+      const payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
         const response = await fetch(url, {
           signal,
           method: "POST",
@@ -748,15 +856,17 @@ async function analyze(config, target) {
   const ratio = aspectRatio(target);
 
   try {
-    return providerKind(config.baseUrl) === "gemini"
+    const analysis = providerKind(config.baseUrl) === "gemini"
       ? await callGemini(config, target, image, ratio)
       : await callOpenAICompatible(config, target, image, ratio);
+    return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
   } catch (error) {
     if (!looksBrokenJson(error)) throw error;
     try {
-      return providerKind(config.baseUrl) === "gemini"
+      const analysis = providerKind(config.baseUrl) === "gemini"
         ? await callGemini(config, target, image, ratio, true)
         : await callOpenAICompatible(config, target, image, ratio, true);
+      return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
     } catch (retryError) {
       throw new Error(
         `模型返回的 JSON 仍然不完整，已自动重试一次但还是失败。请稍后重试，或改用输出更稳定的模型。${retryError instanceof Error ? retryError.message : "unknown error"}`,
@@ -766,14 +876,14 @@ async function analyze(config, target) {
 }
 
 function sanitizeHistoryEntries(value) {
-  return Array.isArray(value) ? value.filter((entry) => entry && typeof entry === "object").slice(0, 49) : [];
+  return Array.isArray(value) ? value.filter((entry) => entry && typeof entry === "object").slice(0, 79) : [];
 }
 
 async function saveUploadedAnalysis(target, analysis) {
   const record = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt: Date.now(),
-    imageSrc: target.src,
+    imageSrc: analysis.imagePreviewSrc || target.src,
     pageUrl: target.pageUrl || "#",
     imageWidth: typeof target.naturalWidth === "number" ? target.naturalWidth : void 0,
     imageHeight: typeof target.naturalHeight === "number" ? target.naturalHeight : void 0,
@@ -781,13 +891,13 @@ async function saveUploadedAnalysis(target, analysis) {
     promptDrafts: {},
   };
   const stored = await chrome.storage.local.get(HISTORY_KEY);
-  const history = [record, ...sanitizeHistoryEntries(stored[HISTORY_KEY])].slice(0, 50);
+  const history = [record, ...sanitizeHistoryEntries(stored[HISTORY_KEY])].slice(0, 80);
   await chrome.storage.local.set({
     [HISTORY_KEY]: history,
     [SNAPSHOT_KEY]: {
       createdAt: record.createdAt,
       target: {
-        src: target.src,
+        src: analysis.imagePreviewSrc || target.src,
         pageUrl: target.pageUrl || "#",
         naturalWidth: record.imageWidth,
         naturalHeight: record.imageHeight,

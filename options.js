@@ -21,233 +21,174 @@ const LANGUAGES = [
 
 const TEXT = {
   en: {
-    console: "System settings",
-    lead: "Configure image prompt analysis, choose interface language, and review local records.",
-    welcomeTitle: "Choose how MX-Insight should connect",
-    welcomeCopy: "A local-first setup keeps your API credentials and analysis records in this browser.",
-    smvapi: "Log in with an SMVAPI account",
-    unavailable: "Not available yet",
-    unavailableTip: "暂未开放",
-    customApi: "Custom API",
-    customApiCopy: "Use an OpenAI-compatible endpoint, Gemini endpoint, or another vision-capable API.",
-    openCustomApi: "Configure",
-    connection: "Connection",
-    account: "Account mode",
-    localMode: "Local custom API",
-    language: "Language",
-    status: "Extension status",
-    enabled: "Enabled",
-    disabled: "Paused",
-    apiSummary: "Custom API",
-    apiMissing: "Not configured",
-    edit: "Edit",
-    test: "Test connection",
-    save: "Save settings",
-    saving: "Saving...",
-    testing: "Testing...",
+    console: "Console",
+    lead: "Manage local records, API settings, preferences, and account status.",
+    settings: "Settings",
+    settingsSub: "API, preferences, account",
+    history: "Saved records",
+    historySub: "Local image analyses",
+    apiTitle: "API settings",
+    apiCopy: "Base URL, API key and model used for image reverse-prompt analysis.",
     baseUrl: "Base URL",
     apiKey: "API Key",
     model: "Model",
     baseUrlPlaceholder: "https://api.openai.com/v1",
     apiKeyPlaceholder: "sk-... / AIza...",
-    modelPlaceholder: "gpt-4o-mini / gemini-2.5-flash / qwen-vl-max",
-    cancel: "Cancel",
+    modelPlaceholder: "gpt-5.5 / gemini-2.5-flash / qwen-vl-max",
+    preferencesTitle: "Preferences",
+    language: "Language",
+    status: "Extension switch",
+    enabled: "Enabled",
+    disabled: "Paused",
+    accountTitle: "Account mode",
+    accountCopy: "SMVAPI login status",
+    smvapi: "SMVAPI",
+    unavailable: "Not logged in / not available yet",
+    save: "Save",
+    test: "Save and test",
+    saving: "Saving...",
+    testing: "Testing...",
     saved: "Settings saved.",
     connected: "Connection is available.",
-    navLocal: "Local data",
-    navBackend: "Backend",
-    navHistory: "Saved records",
-    navHistorySub: "Browse local analyses",
-    navApi: "API settings",
-    navApiSub: "Endpoint, key and model",
-    navPreferences: "Preferences",
-    navPreferencesSub: "Language and extension switch",
-    navAccount: "Account mode",
-    navAccountSub: "SMVAPI login status",
-    apiTitle: "Custom API",
-    apiCopy: "Manage the endpoint used for image analysis.",
-    preferencesTitle: "Preferences",
-    preferencesCopy: "Control language and page analysis availability.",
     historyTitle: "Local saved records",
-    historyCopy: "Records are stored in chrome.storage.local on this browser.",
+    historyCopy: "Click prompt text to copy. Uploaded images are marked as upload source.",
     emptyHistory: "No saved records yet.",
     clearHistory: "Clear records",
     delete: "Delete",
     source: "Source",
+    uploaded: "Uploaded image",
+    copy: "Copy",
+    copied: "Copied.",
+    imageUnavailable: "Image unavailable",
   },
   "zh-CN": {
-    console: "系统设置",
-    lead: "配置图片提示词分析、界面语言，并查看本地保存记录。",
-    welcomeTitle: "选择 MX-Insight 的连接方式",
-    welcomeCopy: "本地优先设置会把接口凭据和分析记录保存在当前浏览器。",
-    smvapi: "使用 SMVAPI 账户登录",
-    unavailable: "暂未开放",
-    unavailableTip: "暂未开放",
-    customApi: "自定义接口",
-    customApiCopy: "接入兼容接口、图片理解接口，或其他支持图片分析的接口。",
-    openCustomApi: "配置",
-    connection: "连接",
-    account: "账户模式",
-    localMode: "本地自定义 API",
-    language: "语言",
-    status: "插件状态",
-    enabled: "开启",
-    disabled: "暂停",
-    apiSummary: "自定义接口",
-    apiMissing: "未配置",
-    edit: "编辑",
-    test: "测试连接",
-    save: "保存设置",
-    saving: "保存中...",
-    testing: "测试中...",
+    console: "后台",
+    lead: "管理本地保存记录、接口设置、偏好设置和账户状态。",
+    settings: "设置",
+    settingsSub: "接口、偏好、账户",
+    history: "保存记录",
+    historySub: "查看本地分析记录",
+    apiTitle: "接口设置",
+    apiCopy: "图片反推使用的接口地址、密钥和模型。",
     baseUrl: "接口地址",
     apiKey: "接口密钥",
     model: "模型名称",
     baseUrlPlaceholder: "请输入接口地址",
     apiKeyPlaceholder: "请输入接口密钥",
     modelPlaceholder: "请输入支持图片分析的模型名称",
-    cancel: "取消",
+    preferencesTitle: "偏好设置",
+    language: "语言",
+    status: "插件开关",
+    enabled: "开启",
+    disabled: "暂停",
+    accountTitle: "账户模式",
+    accountCopy: "SMVAPI 登录状态",
+    smvapi: "SMVAPI",
+    unavailable: "未登录 / 暂未开放",
+    save: "保存",
+    test: "保存并测试",
+    saving: "保存中...",
+    testing: "测试中...",
     saved: "设置已保存。",
     connected: "接口已连通。",
-    navLocal: "本地数据",
-    navBackend: "后台",
-    navHistory: "保存记录",
-    navHistorySub: "查看本地分析记录",
-    navApi: "接口设置",
-    navApiSub: "地址、密钥和模型",
-    navPreferences: "偏好设置",
-    navPreferencesSub: "语言和插件开关",
-    navAccount: "账户模式",
-    navAccountSub: "SMVAPI 登录状态",
-    apiTitle: "自定义接口",
-    apiCopy: "管理图片分析使用的接口配置。",
-    preferencesTitle: "偏好设置",
-    preferencesCopy: "控制界面语言和网页分析开关。",
     historyTitle: "本地保存记录",
-    historyCopy: "记录保存在当前浏览器本地存储中。",
+    historyCopy: "点击提示词文字即可复制。上传图片会标记为上传来源。",
     emptyHistory: "还没有保存记录。",
     clearHistory: "清空记录",
     delete: "删除",
     source: "来源",
+    uploaded: "上传图片",
+    copy: "复制",
+    copied: "已复制。",
+    imageUnavailable: "图片不可用",
   },
   "zh-TW": {
-    console: "系統設定",
-    lead: "設定圖片提示詞分析、介面語言，並查看本地保存記錄。",
-    welcomeTitle: "選擇 MX-Insight 的連線方式",
-    welcomeCopy: "本地優先設定會把介面憑證和分析記錄保存在目前瀏覽器。",
-    smvapi: "使用 SMVAPI 帳戶登入",
-    unavailable: "暫未開放",
-    unavailableTip: "暫未開放",
-    customApi: "自訂介面",
-    customApiCopy: "接入相容介面、圖片理解介面，或其他支援圖片分析的介面。",
-    openCustomApi: "設定",
-    connection: "連線",
-    account: "帳戶模式",
-    localMode: "本地自訂 API",
-    language: "語言",
-    status: "插件狀態",
-    enabled: "開啟",
-    disabled: "暫停",
-    apiSummary: "自訂介面",
-    apiMissing: "未設定",
-    edit: "編輯",
-    test: "測試連線",
-    save: "保存設定",
-    saving: "保存中...",
-    testing: "測試中...",
+    console: "後台",
+    lead: "管理本地保存記錄、介面設定、偏好設定和帳戶狀態。",
+    settings: "設定",
+    settingsSub: "介面、偏好、帳戶",
+    history: "保存記錄",
+    historySub: "查看本地分析記錄",
+    apiTitle: "介面設定",
+    apiCopy: "圖片反推使用的介面位址、密鑰和模型。",
     baseUrl: "介面位址",
     apiKey: "介面密鑰",
     model: "模型名稱",
     baseUrlPlaceholder: "請輸入介面位址",
     apiKeyPlaceholder: "請輸入介面密鑰",
     modelPlaceholder: "請輸入支援圖片分析的模型名稱",
-    cancel: "取消",
+    preferencesTitle: "偏好設定",
+    language: "語言",
+    status: "插件開關",
+    enabled: "開啟",
+    disabled: "暫停",
+    accountTitle: "帳戶模式",
+    accountCopy: "SMVAPI 登入狀態",
+    smvapi: "SMVAPI",
+    unavailable: "未登入 / 暫未開放",
+    save: "保存",
+    test: "保存並測試",
+    saving: "保存中...",
+    testing: "測試中...",
     saved: "設定已保存。",
     connected: "介面已連通。",
-    navLocal: "本地資料",
-    navBackend: "後台",
-    navHistory: "保存記錄",
-    navHistorySub: "查看本地分析記錄",
-    navApi: "介面設定",
-    navApiSub: "位址、密鑰和模型",
-    navPreferences: "偏好設定",
-    navPreferencesSub: "語言和插件開關",
-    navAccount: "帳戶模式",
-    navAccountSub: "SMVAPI 登入狀態",
-    apiTitle: "自訂介面",
-    apiCopy: "管理圖片分析使用的介面設定。",
-    preferencesTitle: "偏好設定",
-    preferencesCopy: "控制介面語言和網頁分析開關。",
     historyTitle: "本地保存記錄",
-    historyCopy: "記錄保存在目前瀏覽器本地儲存中。",
+    historyCopy: "點擊提示詞文字即可複製。上傳圖片會標記為上傳來源。",
     emptyHistory: "還沒有保存記錄。",
     clearHistory: "清空記錄",
     delete: "刪除",
     source: "來源",
+    uploaded: "上傳圖片",
+    copy: "複製",
+    copied: "已複製。",
+    imageUnavailable: "圖片不可用",
   },
   ja: {
-    console: "システム設定",
-    lead: "画像プロンプト分析、表示言語、ローカル保存履歴を管理します。",
-    welcomeTitle: "MX-Insight の接続方法を選択",
-    welcomeCopy: "ローカル優先の設定では、API 認証情報と分析履歴をこのブラウザに保存します。",
-    smvapi: "SMVAPI アカウントでログイン",
-    unavailable: "未公開",
-    unavailableTip: "暂未开放",
-    customApi: "カスタム API",
-    customApiCopy: "OpenAI 互換エンドポイント、Gemini、または画像理解対応 API を使用します。",
-    openCustomApi: "設定",
-    connection: "接続",
-    account: "アカウントモード",
-    localMode: "ローカルカスタム API",
-    language: "言語",
-    status: "拡張機能の状態",
-    enabled: "有効",
-    disabled: "停止",
-    apiSummary: "カスタム API",
-    apiMissing: "未設定",
-    edit: "編集",
-    test: "接続テスト",
-    save: "設定を保存",
-    saving: "保存中...",
-    testing: "テスト中...",
+    console: "管理",
+    lead: "保存履歴、API 設定、環境設定、アカウント状態を管理します。",
+    settings: "設定",
+    settingsSub: "API、環境設定、アカウント",
+    history: "保存履歴",
+    historySub: "ローカル分析を確認",
+    apiTitle: "API 設定",
+    apiCopy: "画像分析に使う URL、キー、モデルを設定します。",
     baseUrl: "Base URL",
     apiKey: "API Key",
     model: "Model",
     baseUrlPlaceholder: "https://api.openai.com/v1",
     apiKeyPlaceholder: "sk-... / AIza...",
-    modelPlaceholder: "gpt-4o-mini / gemini-2.5-flash / qwen-vl-max",
-    cancel: "キャンセル",
+    modelPlaceholder: "gpt-5.5 / gemini-2.5-flash / qwen-vl-max",
+    preferencesTitle: "環境設定",
+    language: "言語",
+    status: "拡張機能",
+    enabled: "有効",
+    disabled: "停止",
+    accountTitle: "アカウントモード",
+    accountCopy: "SMVAPI ログイン状態",
+    smvapi: "SMVAPI",
+    unavailable: "未ログイン / 未公開",
+    save: "保存",
+    test: "保存してテスト",
+    saving: "保存中...",
+    testing: "テスト中...",
     saved: "設定を保存しました。",
     connected: "接続できます。",
-    navLocal: "ローカルデータ",
-    navBackend: "管理",
-    navHistory: "保存履歴",
-    navHistorySub: "ローカル分析を確認",
-    navApi: "API 設定",
-    navApiSub: "URL、キー、モデル",
-    navPreferences: "環境設定",
-    navPreferencesSub: "言語と拡張機能",
-    navAccount: "アカウントモード",
-    navAccountSub: "SMVAPI ログイン状態",
-    apiTitle: "カスタム API",
-    apiCopy: "画像分析に使用する API を管理します。",
-    preferencesTitle: "環境設定",
-    preferencesCopy: "表示言語とページ分析の有効状態を管理します。",
     historyTitle: "ローカル保存履歴",
-    historyCopy: "履歴はこのブラウザの chrome.storage.local に保存されます。",
+    historyCopy: "プロンプト本文をクリックするとコピーできます。アップロード画像はアップロード元として表示します。",
     emptyHistory: "保存履歴はまだありません。",
     clearHistory: "履歴を消去",
     delete: "削除",
     source: "出典",
+    uploaded: "アップロード画像",
+    copy: "コピー",
+    copied: "コピーしました。",
+    imageUnavailable: "画像を表示できません",
   },
 };
 
 const root = document.getElementById("root");
 let settings = { ...DEFAULTS };
 let historyEntries = [];
-let welcomeMode = location.hash === "#welcome";
-let modalOpen = !welcomeMode && (location.hash === "#base-url" || location.hash === "#custom-api");
-let welcomeReady = !welcomeMode;
 let activeSection = sectionFromHash();
 let message = "";
 let messageTone = "";
@@ -257,10 +198,8 @@ let testing = false;
 document.body.dataset.page = "options";
 
 function sectionFromHash(hash = location.hash) {
-  if (hash === "#api" || hash === "#settings" || hash === "#base-url" || hash === "#custom-api") return "api";
-  if (hash === "#preferences") return "preferences";
-  if (hash === "#account") return "account";
-  return "history";
+  if (hash === "#history") return "history";
+  return "settings";
 }
 
 function detectLanguage(value = settings.uiLanguage) {
@@ -289,10 +228,16 @@ function escapeHtml(value) {
 function promptFor(entry) {
   const analysis = entry?.analysis || {};
   const lang = detectLanguage();
-  if (lang === "en") return analysis.en?.prompt || analysis.zh?.prompt || "";
+  if (lang === "en") return analysis.recreationPrompt || analysis.en?.prompt || analysis.zh?.prompt || "";
   if (lang === "ja") return analysis.ja?.prompt || analysis.en?.prompt || analysis.zh?.prompt || "";
   if (lang === "zh-TW") return analysis.zhHant?.prompt || analysis.zh_hant?.prompt || analysis.zh?.prompt || "";
-  return analysis.zh?.prompt || analysis.en?.prompt || "";
+  return analysis.zh?.prompt || analysis.en?.prompt || analysis.recreationPrompt || "";
+}
+
+function sourceFor(entry) {
+  const pageUrl = typeof entry.pageUrl === "string" ? entry.pageUrl.trim() : "";
+  if (!pageUrl || pageUrl === "#") return t("uploaded");
+  return pageUrl;
 }
 
 function formatDate(timestamp) {
@@ -334,17 +279,10 @@ async function saveSettingsFromForm(testAfterSave = false) {
       const response = await chrome.runtime.sendMessage({ type: "TEST_CONNECTION" });
       if (!response?.ok) throw new Error(response?.error || "Connection failed.");
       message = t("connected");
-      messageTone = "success";
-      modalOpen = false;
-      welcomeMode = false;
-      if (location.hash) history.replaceState(null, "", "options.html");
     } else {
       message = t("saved");
-      messageTone = "success";
-      modalOpen = false;
-      welcomeMode = false;
-      if (location.hash) history.replaceState(null, "", "options.html");
     }
+    messageTone = "success";
   } catch (error) {
     message = error instanceof Error ? error.message : String(error);
     messageTone = "error";
@@ -380,6 +318,25 @@ async function clearHistory() {
   render();
 }
 
+async function copyText(text) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+  message = t("copied");
+  messageTone = "success";
+  render();
+}
+
 function renderLanguageOptions() {
   const lang = detectLanguage();
   return LANGUAGES.map((item) => (
@@ -387,56 +344,134 @@ function renderLanguageOptions() {
   )).join("");
 }
 
-function renderWelcome() {
-  if (!welcomeMode) return "";
+function renderSidebar() {
   return `
-    <section class="welcome-stage${welcomeReady ? " is-ready" : ""}" aria-label="${escapeHtml(t("welcomeTitle"))}">
-      <div class="fireworks" aria-hidden="true">
-        <span></span><span></span><span></span><span></span><span></span><span></span>
+    <aside class="side-rail">
+      <div>
+        <div class="brand-block">
+          <img src="/icons/icon-128.png" alt="" class="brand-logo" />
+          <div class="brand-copy">
+            <h1>MX-Insight</h1>
+            <p>${escapeHtml(t("console"))}</p>
+          </div>
+        </div>
+        <nav class="side-nav" aria-label="后台导航">
+          <button type="button" class="side-nav-item${activeSection === "history" ? " is-active" : ""}" data-section="history">
+            <span class="side-nav-title">${escapeHtml(t("history"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("historySub"))}</span>
+          </button>
+          <button type="button" class="side-nav-item${activeSection === "settings" ? " is-active" : ""}" data-section="settings">
+            <span class="side-nav-title">${escapeHtml(t("settings"))}</span>
+            <span class="side-nav-subtitle">${escapeHtml(t("settingsSub"))}</span>
+          </button>
+        </nav>
       </div>
-      <div class="welcome-copy">
-        <img src="/icons/icon-128.png" alt="" class="welcome-logo" />
-        <h1>${escapeHtml(t("welcomeTitle"))}</h1>
-        <p>${escapeHtml(t("welcomeCopy"))}</p>
-      </div>
-      <div class="choice-grid">
-        <button type="button" class="choice-card is-disabled" aria-disabled="true" data-tooltip="${escapeHtml(t("unavailableTip"))}" title="${escapeHtml(t("unavailableTip"))}">
-          <span class="choice-kicker">${escapeHtml(t("account"))}</span>
-          <strong>${escapeHtml(t("smvapi"))}</strong>
-          <small>${escapeHtml(t("unavailable"))}</small>
-        </button>
-        <button type="button" class="choice-card" id="welcome-custom-api">
-          <span class="choice-kicker">${escapeHtml(t("connection"))}</span>
-          <strong>${escapeHtml(t("customApi"))}</strong>
-          <small>${escapeHtml(t("customApiCopy"))}</small>
-        </button>
-      </div>
+      <footer>Copyright © Maishan Inc.</footer>
+    </aside>
+  `;
+}
+
+function renderSettingsView() {
+  return `
+    <section class="view-stack settings-grid">
+      <section class="page-title">
+        <div>
+          <p class="eyebrow">${escapeHtml(t("console"))}</p>
+          <h2>${escapeHtml(t("settings"))}</h2>
+          <p>${escapeHtml(t("lead"))}</p>
+        </div>
+      </section>
+
+      <form class="panel-section settings-api-card" id="settings-form">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">${escapeHtml(t("apiTitle"))}</p>
+            <h2>${escapeHtml(settings.model || t("model"))}</h2>
+            <p>${escapeHtml(t("apiCopy"))}</p>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span>${escapeHtml(t("baseUrl"))}</span>
+            <input id="base-url" type="url" spellcheck="false" value="${escapeHtml(settings.baseUrl)}" placeholder="${escapeHtml(t("baseUrlPlaceholder"))}" />
+          </label>
+          <label class="field">
+            <span>${escapeHtml(t("apiKey"))}</span>
+            <input id="api-key" type="password" spellcheck="false" value="${escapeHtml(settings.apiKey)}" placeholder="${escapeHtml(t("apiKeyPlaceholder"))}" />
+          </label>
+          <label class="field">
+            <span>${escapeHtml(t("model"))}</span>
+            <input id="model" type="text" spellcheck="false" value="${escapeHtml(settings.model)}" placeholder="${escapeHtml(t("modelPlaceholder"))}" />
+          </label>
+        </div>
+        ${message ? `<p class="message ${messageTone === "error" ? "message-error" : "message-success"}">${escapeHtml(message)}</p>` : ""}
+        <div class="modal-actions">
+          <button type="button" class="secondary-action" id="test-connection" ${testing ? "disabled" : ""}>${escapeHtml(testing ? t("testing") : t("test"))}</button>
+          <button type="submit" class="primary-action" ${saving ? "disabled" : ""}>${escapeHtml(saving ? t("saving") : t("save"))}</button>
+        </div>
+      </form>
+
+      <section class="panel-section settings-side-card">
+        <p class="eyebrow">${escapeHtml(t("preferencesTitle"))}</p>
+        <label class="compact-field">
+          <span>${escapeHtml(t("language"))}</span>
+          <select id="language-select">${renderLanguageOptions()}</select>
+        </label>
+        <div class="preference-row">
+          <div>
+            <span>${escapeHtml(t("status"))}</span>
+            <strong>${escapeHtml(settings.enabled ? t("enabled") : t("disabled"))}</strong>
+          </div>
+          <button type="button" class="switch-control${settings.enabled ? " is-on" : ""}" id="status-toggle" aria-pressed="${settings.enabled ? "true" : "false"}">
+            <span></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="panel-section settings-side-card disabled-panel" title="${escapeHtml(t("unavailable"))}">
+        <p class="eyebrow">${escapeHtml(t("accountTitle"))}</p>
+        <h2>${escapeHtml(t("smvapi"))}</h2>
+        <p>${escapeHtml(t("accountCopy"))}</p>
+        <span class="account-status">${escapeHtml(t("unavailable"))}</span>
+      </section>
     </section>
   `;
 }
 
 function renderHistory() {
-  const rows = historyEntries.slice(0, 50).map((entry) => {
+  const rows = historyEntries.slice(0, 80).map((entry) => {
     const prompt = promptFor(entry);
-    const preview = prompt.length > 260 ? `${prompt.slice(0, 260).trimEnd()}...` : prompt;
+    const preview = prompt.length > 360 ? `${prompt.slice(0, 360).trimEnd()}...` : prompt;
+    const source = sourceFor(entry);
+    const sourceIsLink = source !== t("uploaded");
     return `
       <article class="record-card">
-        <img src="${escapeHtml(entry.imageSrc || "")}" alt="" loading="lazy" />
+        <div class="record-image-shell">
+          ${entry.imageSrc ? `<img src="${escapeHtml(entry.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-record-img />` : ""}
+          <span class="record-image-fallback">${escapeHtml(t("imageUnavailable"))}</span>
+        </div>
         <div class="record-body">
           <div class="record-meta">
             <span>${escapeHtml(formatDate(entry.createdAt || Date.now()))}</span>
             <button type="button" class="text-button danger" data-delete-record="${escapeHtml(entry.id)}">${escapeHtml(t("delete"))}</button>
           </div>
-          <p>${escapeHtml(preview || "")}</p>
-          <a href="${escapeHtml(entry.pageUrl || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source"))}</a>
+          <button type="button" class="record-prompt" data-copy-prompt="${escapeHtml(entry.id)}" title="${escapeHtml(t("copy"))}">
+            ${escapeHtml(preview || "")}
+          </button>
+          <div class="record-source">
+            <span>${escapeHtml(t("source"))}</span>
+            ${sourceIsLink
+              ? `<a href="${escapeHtml(source)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(source)}">${escapeHtml(source)}</a>`
+              : `<strong>${escapeHtml(source)}</strong>`}
+          </div>
         </div>
       </article>
     `;
   }).join("");
 
   return `
-    <section class="panel-section history-section">
-      <div class="section-head">
+    <section class="view-stack">
+      <section class="page-title">
         <div>
           <p class="eyebrow">${escapeHtml(t("historyTitle"))}</p>
           <h2>${historyEntries.length}</h2>
@@ -445,233 +480,62 @@ function renderHistory() {
         <button type="button" class="secondary-action" id="clear-history" ${historyEntries.length ? "" : "disabled"}>
           ${escapeHtml(t("clearHistory"))}
         </button>
-      </div>
-      <div class="record-list">
+      </section>
+      <div class="record-grid">
         ${rows || `<p class="empty-state">${escapeHtml(t("emptyHistory"))}</p>`}
       </div>
     </section>
   `;
 }
 
-function renderSidebar() {
-  return `
-    <aside class="side-rail">
-      <div class="brand-block">
-        <img src="/icons/icon-128.png" alt="" class="brand-logo" />
-        <div class="brand-copy">
-          <h1>MX-Insight</h1>
-          <p>图片提示词分析</p>
-        </div>
-      </div>
-      <nav class="side-nav" aria-label="后台导航">
-        <div class="side-nav-group">
-          <p class="side-nav-label">${escapeHtml(t("navLocal"))}</p>
-          <button type="button" class="side-nav-item${activeSection === "history" ? " is-active" : ""}" data-section="history">
-            <span class="side-nav-title">${escapeHtml(t("navHistory"))}</span>
-            <span class="side-nav-subtitle">${escapeHtml(t("navHistorySub"))}</span>
-          </button>
-        </div>
-        <div class="side-nav-group">
-          <p class="side-nav-label">${escapeHtml(t("navBackend"))}</p>
-          <button type="button" class="side-nav-item${activeSection === "api" ? " is-active" : ""}" data-section="api">
-            <span class="side-nav-title">${escapeHtml(t("navApi"))}</span>
-            <span class="side-nav-subtitle">${escapeHtml(t("navApiSub"))}</span>
-          </button>
-          <button type="button" class="side-nav-item${activeSection === "preferences" ? " is-active" : ""}" data-section="preferences">
-            <span class="side-nav-title">${escapeHtml(t("navPreferences"))}</span>
-            <span class="side-nav-subtitle">${escapeHtml(t("navPreferencesSub"))}</span>
-          </button>
-          <button type="button" class="side-nav-item${activeSection === "account" ? " is-active" : ""}" data-section="account">
-            <span class="side-nav-title">${escapeHtml(t("navAccount"))}</span>
-            <span class="side-nav-subtitle">${escapeHtml(t("navAccountSub"))}</span>
-          </button>
-        </div>
-      </nav>
-      <footer>Copyright © Maishan Inc.</footer>
-    </aside>
-  `;
-}
-
-function renderHistoryView() {
-  return `
-    <section class="view-stack">
-      ${renderHistory()}
-    </section>
-  `;
-}
-
-function renderApiView() {
-  const configured = settings.baseUrl && settings.model;
-  return `
-    <section class="view-stack">
-      <section class="hero-panel">
-        <div>
-          <img src="/icons/icon-128.png" alt="" class="section-logo" />
-          <h2>${escapeHtml(t("apiTitle"))}</h2>
-          <p>${escapeHtml(t("apiCopy"))}</p>
-        </div>
-      </section>
-
-      <article class="panel-section">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">${escapeHtml(t("apiSummary"))}</p>
-            <h2>${escapeHtml(configured ? settings.model : t("apiMissing"))}</h2>
-            <p>${escapeHtml(configured ? settings.baseUrl : t("customApiCopy"))}</p>
-          </div>
-          <button type="button" class="primary-action" id="edit-api">${escapeHtml(t("edit"))}</button>
-        </div>
-      </article>
-    </section>
-  `;
-}
-
-function renderPreferencesView() {
-  return `
-    <section class="view-stack">
-      <section class="hero-panel">
-        <div>
-          <img src="/icons/icon-128.png" alt="" class="section-logo" />
-          <h2>${escapeHtml(t("preferencesTitle"))}</h2>
-          <p>${escapeHtml(t("preferencesCopy"))}</p>
-        </div>
-        <div class="control-row">
-          <label class="compact-field">
-            <span>${escapeHtml(t("language"))}</span>
-            <select id="language-select">${renderLanguageOptions()}</select>
-          </label>
-          <label class="switch-field">
-            <span>${escapeHtml(t("status"))}</span>
-            <button type="button" class="toggle-chip${settings.enabled ? " is-on" : ""}" id="status-toggle">
-              ${escapeHtml(settings.enabled ? t("enabled") : t("disabled"))}
-            </button>
-          </label>
-        </div>
-      </section>
-    </section>
-  `;
-}
-
-function renderAccountView() {
-  return `
-    <section class="view-stack">
-      <article class="panel-section disabled-panel" title="${escapeHtml(t("unavailableTip"))}">
-        <p class="eyebrow">${escapeHtml(t("account"))}</p>
-        <h2>${escapeHtml(t("smvapi"))}</h2>
-        <p>${escapeHtml(t("unavailable"))}</p>
-      </article>
-    </section>
-  `;
-}
-
 function renderActiveView() {
-  if (activeSection === "api") return renderApiView();
-  if (activeSection === "preferences") return renderPreferencesView();
-  if (activeSection === "account") return renderAccountView();
-  return renderHistoryView();
-}
-
-function renderModal() {
-  if (!modalOpen) return "";
-  return `
-    <div class="modal-layer" role="dialog" aria-modal="true" aria-label="${escapeHtml(t("customApi"))}">
-      <form class="modal-card" id="custom-api-form">
-        <header class="modal-header">
-          <div>
-            <p class="eyebrow">${escapeHtml(t("connection"))}</p>
-            <h2>${escapeHtml(t("customApi"))}</h2>
-          </div>
-          <button type="button" class="icon-button" id="close-modal" aria-label="${escapeHtml(t("cancel"))}">×</button>
-        </header>
-        <label class="field field-wide">
-          <span>${escapeHtml(t("baseUrl"))}</span>
-          <input id="base-url" type="url" spellcheck="false" value="${escapeHtml(settings.baseUrl)}" placeholder="${escapeHtml(t("baseUrlPlaceholder"))}" />
-        </label>
-        <label class="field">
-          <span>${escapeHtml(t("apiKey"))}</span>
-          <input id="api-key" type="password" spellcheck="false" value="${escapeHtml(settings.apiKey)}" placeholder="${escapeHtml(t("apiKeyPlaceholder"))}" />
-        </label>
-        <label class="field">
-          <span>${escapeHtml(t("model"))}</span>
-          <input id="model" type="text" spellcheck="false" value="${escapeHtml(settings.model)}" placeholder="${escapeHtml(t("modelPlaceholder"))}" />
-        </label>
-        ${message ? `<p class="message ${messageTone === "error" ? "message-error" : "message-success"}">${escapeHtml(message)}</p>` : ""}
-        <div class="modal-actions">
-          <button type="button" class="secondary-action" id="test-connection" ${testing ? "disabled" : ""}>${escapeHtml(testing ? t("testing") : t("test"))}</button>
-          <button type="submit" class="primary-action" ${saving ? "disabled" : ""}>${escapeHtml(saving ? t("saving") : t("save"))}</button>
-        </div>
-      </form>
-    </div>
-  `;
+  return activeSection === "history" ? renderHistory() : renderSettingsView();
 }
 
 function render() {
-  if (welcomeMode) {
-    root.innerHTML = `
-      <main class="install-shell">
-        ${renderWelcome()}
-        ${renderModal()}
-      </main>
-    `;
-    bindEvents();
-    return;
-  }
-
   root.innerHTML = `
     <main class="page-shell">
       ${renderSidebar()}
-
       <section class="workspace">
         ${renderActiveView()}
       </section>
-      ${renderModal()}
     </main>
   `;
-
   bindEvents();
 }
 
 function bindEvents() {
-  document.getElementById("language-select")?.addEventListener("change", (event) => setLanguage(event.target.value));
-  document.getElementById("status-toggle")?.addEventListener("click", () => setEnabled(!settings.enabled));
-  document.getElementById("edit-api")?.addEventListener("click", () => {
-    modalOpen = true;
-    message = "";
-    render();
-  });
-  document.getElementById("welcome-custom-api")?.addEventListener("click", () => {
-    modalOpen = true;
-    message = "";
-    render();
-  });
-  document.getElementById("close-modal")?.addEventListener("click", () => {
-    modalOpen = false;
-    message = "";
-    render();
-  });
-  document.getElementById("custom-api-form")?.addEventListener("submit", (event) => {
+  document.getElementById("settings-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     saveSettingsFromForm(false);
   });
   document.getElementById("test-connection")?.addEventListener("click", () => saveSettingsFromForm(true));
+  document.getElementById("language-select")?.addEventListener("change", (event) => setLanguage(event.target.value));
+  document.getElementById("status-toggle")?.addEventListener("click", () => setEnabled(!settings.enabled));
   document.getElementById("clear-history")?.addEventListener("click", clearHistory);
   document.querySelectorAll("[data-section]").forEach((button) => {
     button.addEventListener("click", () => {
-      activeSection = ["api", "preferences", "account", "history"].includes(button.dataset.section) ? button.dataset.section : "history";
+      activeSection = button.dataset.section === "history" ? "history" : "settings";
       history.replaceState(null, "", `options.html#${activeSection}`);
+      message = "";
       render();
     });
   });
   document.querySelectorAll("[data-delete-record]").forEach((button) => {
     button.addEventListener("click", () => deleteRecord(button.dataset.deleteRecord));
   });
-}
-
-if (welcomeMode) {
-  window.setTimeout(() => {
-    welcomeReady = true;
-    render();
-  }, 1600);
+  document.querySelectorAll("[data-copy-prompt]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const entry = historyEntries.find((item) => item.id === button.dataset.copyPrompt);
+      copyText(promptFor(entry));
+    });
+  });
+  document.querySelectorAll("[data-record-img]").forEach((image) => {
+    image.addEventListener("error", () => {
+      image.removeAttribute("src");
+      image.closest(".record-image-shell")?.classList.add("is-missing");
+    });
+  });
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
