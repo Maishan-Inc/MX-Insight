@@ -251,6 +251,7 @@ let toastTone = "";
 let toastTimer = null;
 let saving = false;
 let testing = false;
+let recordPromptLanguages = {};
 
 document.body.dataset.page = "options";
 
@@ -286,13 +287,73 @@ function cssUrl(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "");
 }
 
-function promptFor(entry) {
-  const analysis = entry?.analysis || {};
+function sortTasks(tasks) {
+  return Array.isArray(tasks)
+    ? [...tasks].sort((a, b) => {
+        const bTime = typeof b?.createdAt === "number" ? b.createdAt : 0;
+        const aTime = typeof a?.createdAt === "number" ? a.createdAt : 0;
+        return bTime - aTime;
+      })
+    : [];
+}
+
+const PROMPT_LANGUAGE_OPTIONS = [
+  { value: "zh", label: "简中" },
+  { value: "zh_hant", label: "繁中" },
+  { value: "en", label: "EN" },
+  { value: "ja", label: "日文" },
+  { value: "json", label: "JSON" },
+];
+
+function defaultPromptLanguage() {
   const lang = detectLanguage();
-  if (lang === "en") return analysis.recreationPrompt || analysis.en?.prompt || analysis.zh?.prompt || "";
-  if (lang === "ja") return analysis.ja?.prompt || analysis.en?.prompt || analysis.zh?.prompt || "";
-  if (lang === "zh-TW") return analysis.zhHant?.prompt || analysis.zh_hant?.prompt || analysis.zh?.prompt || "";
+  if (lang === "en") return "en";
+  if (lang === "ja") return "ja";
+  if (lang === "zh-TW") return "zh_hant";
+  return "zh";
+}
+
+function promptLanguageFor(entry) {
+  const value = recordPromptLanguages[entry?.id];
+  return PROMPT_LANGUAGE_OPTIONS.some((option) => option.value === value) ? value : defaultPromptLanguage();
+}
+
+function jsonPromptFor(entry) {
+  const analysis = entry?.analysis || {};
+  const json = analysis.jsonPrompt || {};
+  const raw = json.raw && typeof json.raw === "object" ? json.raw : {
+    subject: json.subject,
+    action_pose: json.actionPose,
+    details_appearance: json.detailsAppearance,
+    environment_background: json.environmentBackground,
+    lighting_atmosphere: json.lightingAtmosphere,
+    composition_framing: json.compositionFraming,
+    style_camera: json.styleCamera,
+    colors: json.colors,
+    materials: json.materials,
+    aspect_ratio: json.aspectRatio,
+    quality_modifiers: json.qualityModifiers,
+    likely_generation_intent: json.likelyGenerationIntent,
+  };
+  if (analysis.recreationPrompt) raw.recreation_prompt = analysis.recreationPrompt;
+  if (analysis.promptCore) raw.prompt_core = analysis.promptCore;
+  if (analysis.negativePrompt) raw.negative_prompt = analysis.negativePrompt;
+  return JSON.stringify(raw, null, 2);
+}
+
+function promptFor(entry, language = promptLanguageFor(entry)) {
+  const analysis = entry?.analysis || {};
+  if (language === "json") return jsonPromptFor(entry);
+  if (language === "en") return analysis.recreationPrompt || analysis.en?.prompt || analysis.zh?.prompt || "";
+  if (language === "ja") return analysis.ja?.prompt || analysis.en?.prompt || analysis.zh?.prompt || "";
+  if (language === "zh_hant") return analysis.zhHant?.prompt || analysis.zh_hant?.prompt || analysis.zh?.prompt || "";
   return analysis.zh?.prompt || analysis.en?.prompt || analysis.recreationPrompt || "";
+}
+
+function renderPromptLanguageOptions(value) {
+  return PROMPT_LANGUAGE_OPTIONS.map((option) => (
+    `<option value="${option.value}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`
+  )).join("");
 }
 
 function sourceFor(entry) {
@@ -321,7 +382,7 @@ async function load() {
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
   };
   historyEntries = Array.isArray(stored[HISTORY_KEY]) ? stored[HISTORY_KEY] : [];
-  reverseTasks = Array.isArray(stored[TASKS_KEY]) ? stored[TASKS_KEY] : [];
+  reverseTasks = sortTasks(stored[TASKS_KEY]);
   render();
 }
 
@@ -547,7 +608,7 @@ function renderSettingsView() {
 }
 
 function renderHistory() {
-  const visibleTasks = reverseTasks.slice(0, 40);
+  const visibleTasks = sortTasks(reverseTasks).slice(0, 40);
   const taskRows = visibleTasks.map((task) => {
     const progress = Math.max(0, Math.min(100, Math.round(Number(task.progress) || 0)));
     const tone = task.status === "error" ? " is-error" : task.status === "success" ? " is-success" : "";
@@ -570,13 +631,14 @@ function renderHistory() {
   }).join("");
 
   const rows = historyEntries.slice(0, 80).map((entry) => {
-    const prompt = promptFor(entry);
+    const selectedLanguage = promptLanguageFor(entry);
+    const prompt = promptFor(entry, selectedLanguage);
     const preview = prompt.length > 360 ? `${prompt.slice(0, 360).trimEnd()}...` : prompt;
     const source = sourceFor(entry);
     const sourceIsLink = source !== t("uploaded");
     return `
       <article class="record-card">
-        <div class="record-image-shell" ${entry.imageSrc ? `style="--preview-src: url(&quot;${escapeHtml(cssUrl(entry.imageSrc))}&quot;)"` : ""}>
+        <div class="record-image-shell">
           ${entry.imageSrc ? `<img src="${escapeHtml(entry.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-record-img />` : ""}
           <span class="record-image-fallback">${escapeHtml(t("imageUnavailable"))}</span>
         </div>
@@ -589,7 +651,12 @@ function renderHistory() {
             ${escapeHtml(preview || "")}
           </button>
           <div class="record-source">
-            <span>${escapeHtml(t("source"))}</span>
+            <div class="record-source-head">
+              <span>${escapeHtml(t("source"))}</span>
+              <select class="record-language-select" data-record-language="${escapeHtml(entry.id)}" aria-label="切换提示词版本">
+                ${renderPromptLanguageOptions(selectedLanguage)}
+              </select>
+            </div>
             ${sourceIsLink
               ? `<a href="${escapeHtml(source)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(source)}">${escapeHtml(source)}</a>`
               : `<strong>${escapeHtml(source)}</strong>`}
@@ -668,6 +735,14 @@ function bindEvents() {
       copyText(promptFor(entry));
     });
   });
+  document.querySelectorAll("[data-record-language]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const id = select.dataset.recordLanguage;
+      if (!id) return;
+      recordPromptLanguages = { ...recordPromptLanguages, [id]: select.value };
+      render();
+    });
+  });
   document.querySelectorAll("[data-record-img]").forEach((image) => {
     image.addEventListener("error", () => {
       image.removeAttribute("src");
@@ -679,7 +754,7 @@ function bindEvents() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes[HISTORY_KEY]) historyEntries = Array.isArray(changes[HISTORY_KEY].newValue) ? changes[HISTORY_KEY].newValue : [];
-  if (changes[TASKS_KEY]) reverseTasks = Array.isArray(changes[TASKS_KEY].newValue) ? changes[TASKS_KEY].newValue : [];
+  if (changes[TASKS_KEY]) reverseTasks = sortTasks(changes[TASKS_KEY].newValue);
   if (SETTINGS_KEYS.some((key) => changes[key])) {
     for (const key of SETTINGS_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue;

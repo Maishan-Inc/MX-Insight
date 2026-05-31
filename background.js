@@ -904,7 +904,16 @@ function sanitizeHistoryEntries(value) {
 }
 
 function sanitizeTasks(value) {
-  return Array.isArray(value) ? value.filter((task) => task && typeof task === "object").slice(0, 40) : [];
+  return Array.isArray(value)
+    ? value
+        .filter((task) => task && typeof task === "object")
+        .sort((a, b) => {
+          const bTime = typeof b.createdAt === "number" ? b.createdAt : 0;
+          const aTime = typeof a.createdAt === "number" ? a.createdAt : 0;
+          return bTime - aTime;
+        })
+        .slice(0, 40)
+    : [];
 }
 
 function taskTitle(target) {
@@ -926,9 +935,16 @@ async function upsertTask(patch) {
   const nextTask = {
     ...(existing || {}),
     ...patch,
+    createdAt: typeof existing?.createdAt === "number" ? existing.createdAt : patch.createdAt,
     updatedAt: Date.now(),
   };
-  const next = [nextTask, ...tasks.filter((task) => task.id !== patch.id)].slice(0, 40);
+  const next = [nextTask, ...tasks.filter((task) => task.id !== patch.id)]
+    .sort((a, b) => {
+      const bTime = typeof b.createdAt === "number" ? b.createdAt : 0;
+      const aTime = typeof a.createdAt === "number" ? a.createdAt : 0;
+      return bTime - aTime;
+    })
+    .slice(0, 40);
   await chrome.storage.local.set({ [TASKS_KEY]: next });
   return nextTask;
 }

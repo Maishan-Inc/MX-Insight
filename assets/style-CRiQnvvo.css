@@ -710,7 +710,7 @@ a {
   position: relative;
   display: grid;
   grid-template-rows: 210px minmax(0, 1fr);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .record-image-shell {
@@ -721,33 +721,6 @@ a {
   overflow: hidden;
 }
 
-.record-image-shell::after {
-  content: "";
-  position: fixed;
-  left: clamp(320px, 32vw, 540px);
-  top: 50%;
-  z-index: 60;
-  width: min(520px, calc(100vw - 360px));
-  height: min(76vh, 620px);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background-color: var(--surface);
-  background-image: var(--preview-src);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  box-shadow: var(--shadow);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%) scale(0.98);
-  transition: opacity 0.14s ease, transform 0.14s ease;
-}
-
-.record-image-shell:hover::after {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-
 .record-image-shell img {
   position: absolute;
   inset: 0;
@@ -755,6 +728,13 @@ a {
   height: 100%;
   object-fit: cover;
   background: var(--surface-soft);
+  transition: object-fit 0.12s ease, transform 0.12s ease, background 0.12s ease;
+}
+
+.record-image-shell:hover img {
+  object-fit: contain;
+  background: var(--surface);
+  transform: scale(1);
 }
 
 .record-image-fallback {
@@ -807,6 +787,32 @@ a {
   gap: 4px;
   min-width: 0;
   font-size: 12px;
+}
+
+.record-source-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.record-language-select {
+  min-width: 82px;
+  max-width: 96px;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 12px;
+  outline: none;
+}
+
+.record-language-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .record-source a,

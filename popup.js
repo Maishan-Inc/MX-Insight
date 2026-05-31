@@ -132,6 +132,16 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function sortTasks(tasks) {
+  return Array.isArray(tasks)
+    ? [...tasks].sort((a, b) => {
+        const bTime = typeof b?.createdAt === "number" ? b.createdAt : 0;
+        const aTime = typeof a?.createdAt === "number" ? a.createdAt : 0;
+        return bTime - aTime;
+      })
+    : [];
+}
+
 async function loadSettings() {
   const stored = await chrome.storage.local.get([...SETTINGS_KEYS, TASKS_KEY]);
   settings = {
@@ -140,7 +150,7 @@ async function loadSettings() {
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : true,
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
   };
-  reverseTasks = Array.isArray(stored[TASKS_KEY]) ? stored[TASKS_KEY] : [];
+  reverseTasks = sortTasks(stored[TASKS_KEY]);
   ready = true;
   render();
 }
@@ -268,7 +278,7 @@ function taskStep(task) {
 }
 
 function renderTasks() {
-  const tasks = reverseTasks.slice(0, 3);
+  const tasks = sortTasks(reverseTasks).slice(0, 4);
   if (!tasks.length) return "";
   return `
     <section class="popup-task-list" aria-label="${escapeHtml(t("taskProgress"))}">
@@ -362,7 +372,7 @@ loadSettings();
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes[TASKS_KEY]) {
-    reverseTasks = Array.isArray(changes[TASKS_KEY].newValue) ? changes[TASKS_KEY].newValue : [];
+    reverseTasks = sortTasks(changes[TASKS_KEY].newValue);
     render();
   }
 });
