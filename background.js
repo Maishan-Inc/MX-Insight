@@ -928,17 +928,34 @@ function taskTitle(target) {
   }
 }
 
+function promptPreviewForNotification(record) {
+  const prompt = record?.analysis?.zh?.prompt || record?.analysis?.en?.prompt || record?.analysis?.recreationPrompt || "";
+  const compact = String(prompt).replace(/\s+/g, " ").trim();
+  return compact.length > 120 ? `${compact.slice(0, 117).trimEnd()}...` : compact;
+}
+
 function showTaskCompleteNotification(task, record) {
   if (!chrome.notifications?.create) return;
   const title = "反推完成";
-  const message = `${task?.title || "图片"} 已完成反推`;
-  const options = {
-    type: "basic",
-    iconUrl: "icons/icon-128.png",
-    title,
-    message,
-    priority: 1,
-  };
+  const preview = promptPreviewForNotification(record);
+  const message = `${task?.title || "图片"} 已完成反推${preview ? `\n${preview}` : ""}`;
+  const imageUrl = typeof record?.imageSrc === "string" && /^data:image\//i.test(record.imageSrc) ? record.imageSrc : "";
+  const options = imageUrl
+    ? {
+        type: "image",
+        iconUrl: "icons/icon-128.png",
+        imageUrl,
+        title,
+        message,
+        priority: 1,
+      }
+    : {
+        type: "basic",
+        iconUrl: "icons/icon-128.png",
+        title,
+        message,
+        priority: 1,
+      };
   chrome.notifications.create(`mx-insight-task-${task?.id || Date.now()}`, options, () => {
     chrome.runtime.lastError;
   });
