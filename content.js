@@ -1,4 +1,4 @@
-const ft=["正在分析主体","正在提取风格","正在生成提示词"],Le="defaultGeneratorSite",$e="sharedPanelSession",Me="inlinePromptOnboardingComplete",Gi=["baseUrl","apiKey","model"],oi=["jimeng","gemini","midjourney","lovart"],Jt=[220,700,1500,2600,4200,6200,8600],St={jimeng:{id:"jimeng",label:"即梦",shortLabel:"即梦",url:"https://jimeng.jianying.com/",logoUrl:"https://www.google.com/s2/favicons?domain=jimeng.jianying.com&sz=64",badgeText:"即",accentClass:"is-jimeng",matchHost:e=>e==="jimeng.jianying.com"||e.endsWith(".jimeng.jianying.com"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[contenteditable='true']","[role='textbox']"],sendSelectors:["button[type='submit']","button[aria-label*='生成']","button[title*='生成']","button[data-testid*='send']"]},gemini:{id:"gemini",label:"Gemini Apps",shortLabel:"Gemini",url:"https://gemini.google.com/app",logoUrl:"https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64",badgeText:"G",accentClass:"is-gemini",matchHost:e=>e==="gemini.google.com",promptSelectors:["rich-textarea [contenteditable='true']","textarea","[contenteditable='true'][aria-label]","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[aria-label*='Send']","button[aria-label*='send']","button[type='submit']","button[data-testid*='send']"]},midjourney:{id:"midjourney",label:"Midjourney Web",shortLabel:"MJ",url:"https://www.midjourney.com/imagine",logoUrl:"https://www.google.com/s2/favicons?domain=midjourney.com&sz=64",badgeText:"MJ",accentClass:"is-midjourney",matchHost:e=>e==="www.midjourney.com"||e==="midjourney.com"||e.endsWith(".midjourney.com"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[type='submit']","button[aria-label*='Imagine']","button[aria-label*='Generate']","button[data-testid*='send']"]},lovart:{id:"lovart",label:"Lovart",shortLabel:"Lovart",url:"https://www.lovart.ai/",logoUrl:"https://www.google.com/s2/favicons?domain=lovart.ai&sz=64",badgeText:"LO",accentClass:"is-lovart",matchHost:e=>e==="www.lovart.ai"||e==="lovart.ai"||e.endsWith(".lovart.ai"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[type='submit']","button[aria-label*='Generate']","button[aria-label*='Create']","button[data-testid*='send']"]}},d={zh:"中",json:"J",analysisImage:"分析图像",analysisResult:"分析结果",apiSetupTitle:"接口设置",apiSetupDescription:"首次使用先在卡片内填写接口地址、接口密钥和模型名称，保存后就会继续分析当前图片。",apiSetupBaseUrl:"接口地址",apiSetupApiKey:"接口密钥",apiSetupModel:"模型名称",apiSetupSave:"保存并开始分析",apiSetupSaving:"保存中...",apiSetupBaseUrlPlaceholder:"例如：https://api.example.com/v1",apiSetupApiKeyPlaceholder:"请输入接口密钥",apiSetupModelPlaceholder:"请输入支持图片分析的模型名称",retry:"重试",openSettings:"打开设置",copy:"复制",copied:"已复制",copyAndOpenPrefix:"复制并打开",openingGenerator:"打开中...",chooseGeneratorSite:"选择生图站点",generatorCopiedToastPrefix:"已复制提示词并打开",generatorFallbackToastSuffix:"，若页面未自动填入，可直接粘贴。",generatorReadyToastSuffix:"已填入提示词，现在点发送即可。",generatorOpenError:"打开生图站点失败，请稍后重试。",openAction:"打开",promptAction:"提示词",promptLoading:"分析中",saveAction:"保存",saveLoading:"保存中",saveDone:"已保存",saveRetry:"重试保存",saveSuccessToast:"已加入历史",minimizePanel:"收缩",expandPanel:"展开",inlineActionsTitle:"网页悬浮与分析",inlineActionsOn:"关闭悬浮菜单",inlineActionsOff:"开启悬浮菜单",closeSharedPanel:"关闭插件页面",actionMenuLabel:"图片快捷操作",history:"历史",historyLabel:"历史",deleteHistory:"删除这条历史",closeHistory:"关闭历史",emptyHistory:"还没有历史记录",savingHistory:"分析中",missingLatestAnalysis:"还没有可以直接打开的解析结果，请先右键图片完成一次分析。",missingImage:"没有拿到可分析的图片地址，请右键普通网页图片再试一次。"};let W=document.getElementById("imagetoprompt-root"),Xe=null,u=null,J=null,ue=null,l={status:"hidden",language:"zh",analysis:null,error:"",copied:!1},G={element:null,target:null,point:null},O=null,z=null,w=null,fe=0,y=null,st=null,At={x:0,y:0},Ee=null,jt=!1,si=0,v=12,H=null,ie=null,_t=null,Pe=null,oe="",Q="",ye={},D=!1,U=!1,Te=null,Je=!1,k=[],Se=null,mt=!1,x=!1,xe=!1,je=null,j=[],E=null,Ct=new Set,kt=null,_=null,me=0,se=null,Ae=null,q=null,N=null,be=null,B=!1,Be=null,ne=null,re=null,qe="",Zt=0,K=!0,C=!0,h="hidden",le="jimeng",lt=!1,_e=!1,Z=!1,ae="idle",li=0,pe=null,Ve=null,Ie=[],He=null,A=null,b={baseUrl:"",apiKey:"",model:"",error:"",isSaving:!1},Ze=null;const ci=new Map,Ui=`
+const ft=["读取图片","发送至模型","生成提示词"],Le="defaultGeneratorSite",$e="sharedPanelSession",Me="inlinePromptOnboardingComplete",Gi=["baseUrl","apiKey","model"],oi=["jimeng","gemini","midjourney","lovart"],Jt=[220,700,1500,2600,4200,6200,8600],St={jimeng:{id:"jimeng",label:"即梦",shortLabel:"即梦",url:"https://jimeng.jianying.com/",logoUrl:"https://www.google.com/s2/favicons?domain=jimeng.jianying.com&sz=64",badgeText:"即",accentClass:"is-jimeng",matchHost:e=>e==="jimeng.jianying.com"||e.endsWith(".jimeng.jianying.com"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[contenteditable='true']","[role='textbox']"],sendSelectors:["button[type='submit']","button[aria-label*='生成']","button[title*='生成']","button[data-testid*='send']"]},gemini:{id:"gemini",label:"Gemini Apps",shortLabel:"Gemini",url:"https://gemini.google.com/app",logoUrl:"https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64",badgeText:"G",accentClass:"is-gemini",matchHost:e=>e==="gemini.google.com",promptSelectors:["rich-textarea [contenteditable='true']","textarea","[contenteditable='true'][aria-label]","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[aria-label*='Send']","button[aria-label*='send']","button[type='submit']","button[data-testid*='send']"]},midjourney:{id:"midjourney",label:"Midjourney Web",shortLabel:"MJ",url:"https://www.midjourney.com/imagine",logoUrl:"https://www.google.com/s2/favicons?domain=midjourney.com&sz=64",badgeText:"MJ",accentClass:"is-midjourney",matchHost:e=>e==="www.midjourney.com"||e==="midjourney.com"||e.endsWith(".midjourney.com"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[type='submit']","button[aria-label*='Imagine']","button[aria-label*='Generate']","button[data-testid*='send']"]},lovart:{id:"lovart",label:"Lovart",shortLabel:"Lovart",url:"https://www.lovart.ai/",logoUrl:"https://www.google.com/s2/favicons?domain=lovart.ai&sz=64",badgeText:"LO",accentClass:"is-lovart",matchHost:e=>e==="www.lovart.ai"||e==="lovart.ai"||e.endsWith(".lovart.ai"),promptSelectors:["textarea","[contenteditable='true'][role='textbox']","[role='textbox']","[contenteditable='true']"],sendSelectors:["button[type='submit']","button[aria-label*='Generate']","button[aria-label*='Create']","button[data-testid*='send']"]}},d={zh:"中",json:"J",analysisImage:"分析图像",analysisResult:"分析结果",apiSetupTitle:"接口设置",apiSetupDescription:"首次使用先在卡片内填写接口地址、接口密钥和模型名称，保存后就会继续分析当前图片。",apiSetupBaseUrl:"接口地址",apiSetupApiKey:"接口密钥",apiSetupModel:"模型名称",apiSetupSave:"保存并开始分析",apiSetupSaving:"保存中...",apiSetupBaseUrlPlaceholder:"例如：https://api.example.com/v1",apiSetupApiKeyPlaceholder:"请输入接口密钥",apiSetupModelPlaceholder:"请输入支持图片分析的模型名称",retry:"重试",openSettings:"打开设置",copy:"复制",copied:"已复制",copyAndOpenPrefix:"复制并打开",openingGenerator:"打开中...",chooseGeneratorSite:"选择生图站点",generatorCopiedToastPrefix:"已复制提示词并打开",generatorFallbackToastSuffix:"，若页面未自动填入，可直接粘贴。",generatorReadyToastSuffix:"已填入提示词，现在点发送即可。",generatorOpenError:"打开生图站点失败，请稍后重试。",openAction:"打开",promptAction:"提示词",promptLoading:"分析中",saveAction:"保存",saveLoading:"保存中",saveDone:"已保存",saveRetry:"重试保存",saveSuccessToast:"已加入历史",minimizePanel:"收缩",expandPanel:"展开",inlineActionsTitle:"网页悬浮与分析",inlineActionsOn:"关闭悬浮菜单",inlineActionsOff:"开启悬浮菜单",closeSharedPanel:"关闭插件页面",actionMenuLabel:"图片快捷操作",history:"历史",historyLabel:"历史",deleteHistory:"删除这条历史",closeHistory:"关闭历史",emptyHistory:"还没有历史记录",savingHistory:"分析中",missingLatestAnalysis:"还没有可以直接打开的解析结果，请先右键图片完成一次分析。",missingImage:"没有拿到可分析的图片地址，请右键普通网页图片再试一次。"};let W=document.getElementById("imagetoprompt-root"),Xe=null,u=null,J=null,ue=null,l={status:"hidden",language:"zh",analysis:null,error:"",copied:!1},G={element:null,target:null,point:null},O=null,z=null,w=null,fe=0,y=null,st=null,At={x:0,y:0},Ee=null,jt=!1,si=0,v=12,H=null,ie=null,_t=null,Pe=null,oe="",Q="",ye={},D=!1,U=!1,Te=null,Je=!1,k=[],Se=null,mt=!1,x=!1,xe=!1,je=null,j=[],E=null,Ct=new Set,kt=null,_=null,me=0,se=null,Ae=null,q=null,N=null,be=null,B=!1,Be=null,ne=null,re=null,qe="",Zt=0,K=!0,C=!0,h="hidden",le="jimeng",lt=!1,_e=!1,Z=!1,ae="idle",li=0,pe=null,Ve=null,Ie=[],He=null,A=null,b={baseUrl:"",apiKey:"",model:"",error:"",isSaving:!1},Ze=null;const ci=new Map,Ui=`
   :host {
     all: initial;
     position: fixed !important;
@@ -1906,6 +1906,517 @@ const ft=["正在分析主体","正在提取风格","正在生成提示词"],Le=
     outline: none;
   }
 
+  :host {
+    --mx-bg: #f6f8fb;
+    --mx-panel: #ffffff;
+    --mx-panel-soft: #f2f5f9;
+    --mx-panel-softer: #e9eef6;
+    --mx-text: #111827;
+    --mx-muted: #6b7280;
+    --mx-subtle: #9ca3af;
+    --mx-line: #d8dee9;
+    --mx-line-strong: #c7d0df;
+    --mx-primary: #2563eb;
+    --mx-primary-hover: #1d4ed8;
+    --mx-primary-text: #ffffff;
+    --mx-danger: #dc2626;
+    --mx-success: #15803d;
+    --mx-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+    --mx-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  *, *::before, *::after {
+    letter-spacing: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .panel-shell {
+    display: flex !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+  }
+
+  .panel {
+    width: min(410px, calc(var(--imagetoprompt-vw, 100vw) - 24px)) !important;
+    min-width: min(410px, calc(var(--imagetoprompt-vw, 100vw) - 24px)) !important;
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--mx-shadow) !important;
+    overflow: hidden !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .panel.is-minimized {
+    width: 330px !important;
+    min-width: 330px !important;
+  }
+
+  .panel::before,
+  .panel::after,
+  .ring-glow,
+  .glass-pill,
+  .history-card-face::before,
+  .history-card-face::after,
+  .history-flyover-face::before,
+  .history-flyover-face::after,
+  .generator-logo-stream::before,
+  .generator-logo-stream::after {
+    display: none !important;
+  }
+
+  .panel-inner {
+    max-height: min(82vh, 680px) !important;
+    padding: 0 !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .header {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 14px 14px 12px !important;
+    align-items: center !important;
+    gap: 12px !important;
+    border-bottom: 1px solid var(--mx-line) !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .header.is-loading {
+    min-height: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .header-copy,
+  .header.is-loading .header-copy {
+    padding: 0 !important;
+    min-width: 0 !important;
+  }
+
+  .panel-thumb {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--mx-line) !important;
+    background: var(--mx-panel-soft) !important;
+    overflow: hidden !important;
+    box-shadow: var(--mx-shadow-soft) !important;
+  }
+
+  .panel-thumb img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .eyebrow {
+    color: var(--mx-muted) !important;
+    font-size: 11px !important;
+    font-weight: 650 !important;
+    text-transform: uppercase !important;
+  }
+
+  .title-row {
+    margin-top: 3px !important;
+  }
+
+  .title {
+    color: var(--mx-text) !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+  }
+
+  .header-actions {
+    position: static !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-left: auto !important;
+  }
+
+  .close-button,
+  .minimized-icon-button,
+  .history-button,
+  .history-close-button,
+  .history-delete-button {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    color: var(--mx-muted) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+  }
+
+  .close-button:hover,
+  .minimized-icon-button:hover,
+  .history-button:hover,
+  .history-close-button:hover,
+  .history-delete-button:hover {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel-soft) !important;
+    border-color: var(--mx-line-strong) !important;
+    transform: none !important;
+  }
+
+  .body {
+    padding: 14px !important;
+    gap: 12px !important;
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .body-success {
+    min-height: 310px !important;
+  }
+
+  .scroll-area {
+    max-height: min(48vh, 390px) !important;
+    padding: 12px !important;
+    overflow: auto !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 10px !important;
+    background: var(--mx-panel-soft) !important;
+  }
+
+  .scroll-area.json-scroll {
+    max-height: min(48vh, 390px) !important;
+  }
+
+  .analysis,
+  .prompt,
+  .prompt-editor,
+  .error-text,
+  .setup-copy,
+  .loading-status {
+    color: var(--mx-text) !important;
+  }
+
+  .prompt-editor,
+  .prompt {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--mx-text) !important;
+    font-size: 13px !important;
+    line-height: 1.68 !important;
+  }
+
+  .prompt-editor.json-view {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+  }
+
+  .success-meta {
+    min-height: 0 !important;
+  }
+
+  .tags {
+    gap: 6px !important;
+  }
+
+  .tag {
+    padding: 5px 8px !important;
+    color: #374151 !important;
+    background: #eef2f7 !important;
+    border: 1px solid #dbe3ee !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+  }
+
+  .footer {
+    grid-template-columns: minmax(0, 1.1fr) minmax(112px, 0.9fr) !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 12px 14px 14px !important;
+    border-top: 1px solid var(--mx-line) !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .generator-primary-button,
+  .generator-site-trigger,
+  .generator-site-option,
+  .language-select,
+  .setup-input,
+  .image-action-button,
+  .minimized-toggle-card {
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .primary-button,
+  .generator-primary-button {
+    min-height: 44px !important;
+    color: var(--mx-primary-text) !important;
+    background: var(--mx-primary) !important;
+    border: 1px solid var(--mx-primary) !important;
+    font-weight: 700 !important;
+  }
+
+  .primary-button:hover,
+  .generator-primary-button:hover {
+    color: var(--mx-primary-text) !important;
+    background: var(--mx-primary-hover) !important;
+    border-color: var(--mx-primary-hover) !important;
+    transform: none !important;
+  }
+
+  .secondary-button,
+  .generator-site-trigger,
+  .language-select,
+  .setup-input,
+  .image-action-button,
+  .generator-site-option {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+  }
+
+  .secondary-button:hover,
+  .generator-site-trigger:hover,
+  .language-select:hover,
+  .image-action-button:hover,
+  .generator-site-option:hover {
+    background: var(--mx-panel-soft) !important;
+    border-color: var(--mx-line-strong) !important;
+    transform: none !important;
+  }
+
+  .language-picker {
+    min-width: 0 !important;
+  }
+
+  .language-select {
+    height: 44px !important;
+    padding: 0 10px !important;
+    color: var(--mx-text) !important;
+    font-size: 12px !important;
+  }
+
+  .generator-action-row {
+    min-height: 44px !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+  }
+
+  .generator-primary-button,
+  .generator-site-trigger {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .generator-primary-button {
+    border-radius: 8px 0 0 8px !important;
+  }
+
+  .generator-site-trigger {
+    width: 44px !important;
+    border-radius: 0 8px 8px 0 !important;
+    color: var(--mx-primary-text) !important;
+    background: var(--mx-primary) !important;
+    border-color: var(--mx-primary) !important;
+  }
+
+  .generator-logo-stream {
+    display: none !important;
+  }
+
+  .generator-button-copy {
+    justify-content: center !important;
+  }
+
+  .generator-site-menu {
+    top: calc(100% + 8px) !important;
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--mx-shadow-soft) !important;
+  }
+
+  .generator-site-option-url {
+    color: var(--mx-muted) !important;
+  }
+
+  .loading {
+    gap: 10px !important;
+  }
+
+  .progress-track {
+    height: 8px !important;
+    background: var(--mx-panel-softer) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .progress-bar {
+    background: var(--mx-primary) !important;
+    box-shadow: none !important;
+  }
+
+  .progress-value,
+  .setup-label,
+  .setup-input::placeholder,
+  .prompt-editor::placeholder {
+    color: var(--mx-muted) !important;
+  }
+
+  .loading-status {
+    margin-top: 2px !important;
+    color: var(--mx-muted) !important;
+    animation: none !important;
+  }
+
+  .setup-shell {
+    gap: 12px !important;
+  }
+
+  .setup-input {
+    height: 42px !important;
+    background: var(--mx-panel-soft) !important;
+  }
+
+  .setup-input:focus,
+  .setup-input:focus-visible {
+    border-color: var(--mx-primary) !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .setup-error,
+  .minimized-icon-button.is-danger,
+  .history-delete-button {
+    color: var(--mx-danger) !important;
+  }
+
+  .image-action-menu,
+  .image-action-toast {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--mx-shadow-soft) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .image-action-button.is-success,
+  .button-check {
+    color: var(--mx-success) !important;
+  }
+
+  .minimized-panel {
+    width: 330px !important;
+    min-width: 330px !important;
+    padding: 10px !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .minimized-toggle-card {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel-soft) !important;
+    border: 1px solid var(--mx-line) !important;
+  }
+
+  .minimized-toggle-title {
+    color: var(--mx-text) !important;
+  }
+
+  .minimized-toggle-switch {
+    border-color: var(--mx-line) !important;
+    background: var(--mx-panel-softer) !important;
+    box-shadow: none !important;
+  }
+
+  .minimized-toggle-card.is-active .minimized-toggle-switch {
+    border-color: var(--mx-primary) !important;
+    background: var(--mx-primary) !important;
+    box-shadow: none !important;
+  }
+
+  .history-rail {
+    width: 220px !important;
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--mx-shadow) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .history-rail::before {
+    display: none !important;
+  }
+
+  .history-rail-inner {
+    padding: 14px !important;
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+  }
+
+  .history-rail-title {
+    color: var(--mx-text) !important;
+    font-weight: 700 !important;
+  }
+
+  .history-rail-count,
+  .history-empty {
+    color: var(--mx-muted) !important;
+  }
+
+  .history-card-shell,
+  .history-card-face {
+    border-radius: 10px !important;
+  }
+
+  .history-card-face {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel-soft) !important;
+    border: 1px solid var(--mx-line) !important;
+    box-shadow: none !important;
+  }
+
+  .history-item.is-selected .history-card-face,
+  .history-button.is-active {
+    border-color: var(--mx-primary) !important;
+    background: #eff6ff !important;
+  }
+
+  .history-flyover-face {
+    color: var(--mx-text) !important;
+    background: var(--mx-panel) !important;
+    border: 1px solid var(--mx-line) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--mx-shadow-soft) !important;
+  }
+
+  @media (max-width: 520px) {
+    .panel,
+    .panel.is-minimized {
+      width: calc(var(--imagetoprompt-vw, 100vw) - 24px) !important;
+      min-width: calc(var(--imagetoprompt-vw, 100vw) - 24px) !important;
+    }
+
+    .footer {
+      grid-template-columns: 1fr !important;
+    }
+
+    .history-rail {
+      display: none !important;
+    }
+  }
+
   @keyframes generatorLogoFlow {
     0% {
       transform: translateX(0);
@@ -2318,6 +2829,7 @@ const ft=["正在分析主体","正在提取风格","正在生成提示词"],Le=
         <div class="glass-pill"></div>
         <div class="panel-inner">
           <div class="header${g}" data-drag-handle="true">
+            ${z?.src?`<div class="panel-thumb"><img src="${S(z.src)}" alt="" /></div>`:""}
             <div class="header-copy">
               <div class="eyebrow">MX-Insight</div>
               <div class="title-row">
