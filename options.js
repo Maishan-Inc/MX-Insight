@@ -1,6 +1,7 @@
 const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage"];
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
+const TASKS_KEY = "reversePromptTasks";
 
 const DEFAULTS = {
   baseUrl: "",
@@ -22,11 +23,11 @@ const LANGUAGES = [
 const TEXT = {
   en: {
     console: "Console",
-    lead: "Manage local records, API settings, preferences, and account status.",
+    lead: "Manage reverse prompt records, API settings, preferences, and account status.",
     settings: "Settings",
     settingsSub: "API, preferences, account",
-    history: "Saved records",
-    historySub: "Local image analyses",
+    history: "Reverse records",
+    historySub: "Reverse prompt tasks",
     apiTitle: "API settings",
     apiCopy: "Base URL, API key and model used for image reverse-prompt analysis.",
     baseUrl: "Base URL",
@@ -50,10 +51,14 @@ const TEXT = {
     testing: "Testing...",
     saved: "Settings saved.",
     connected: "Connection is available.",
-    historyTitle: "Local saved records",
-    historyCopy: "Click prompt text to copy. Uploaded images are marked as upload source.",
-    emptyHistory: "No saved records yet.",
+    historyTitle: "Reverse prompt records",
+    historyCopy: "Live task progress appears here. Click prompt text to copy after completion.",
+    emptyHistory: "No reverse prompt records yet.",
     clearHistory: "Clear records",
+    taskProgress: "Task progress",
+    taskDone: "Completed",
+    taskError: "Failed",
+    taskRunning: "Running",
     delete: "Delete",
     source: "Source",
     uploaded: "Uploaded image",
@@ -63,11 +68,11 @@ const TEXT = {
   },
   "zh-CN": {
     console: "后台",
-    lead: "管理本地保存记录、接口设置、偏好设置和账户状态。",
+    lead: "管理本地反推记录、接口设置、偏好设置和账户状态。",
     settings: "设置",
     settingsSub: "接口、偏好、账户",
-    history: "保存记录",
-    historySub: "查看本地分析记录",
+    history: "反推记录",
+    historySub: "查看反推任务和结果",
     apiTitle: "接口设置",
     apiCopy: "图片反推使用的接口地址、密钥和模型。",
     baseUrl: "接口地址",
@@ -91,10 +96,14 @@ const TEXT = {
     testing: "测试中...",
     saved: "设置已保存。",
     connected: "接口已连通。",
-    historyTitle: "本地保存记录",
-    historyCopy: "点击提示词文字即可复制。上传图片会标记为上传来源。",
-    emptyHistory: "还没有保存记录。",
+    historyTitle: "反推记录",
+    historyCopy: "这里会实时显示后台反推进度。完成后点击提示词文字即可复制。",
+    emptyHistory: "还没有反推记录。",
     clearHistory: "清空记录",
+    taskProgress: "任务进度",
+    taskDone: "已完成",
+    taskError: "失败",
+    taskRunning: "进行中",
     delete: "删除",
     source: "来源",
     uploaded: "上传图片",
@@ -104,11 +113,11 @@ const TEXT = {
   },
   "zh-TW": {
     console: "後台",
-    lead: "管理本地保存記錄、介面設定、偏好設定和帳戶狀態。",
+    lead: "管理本地反推記錄、介面設定、偏好設定和帳戶狀態。",
     settings: "設定",
     settingsSub: "介面、偏好、帳戶",
-    history: "保存記錄",
-    historySub: "查看本地分析記錄",
+    history: "反推記錄",
+    historySub: "查看反推任務和結果",
     apiTitle: "介面設定",
     apiCopy: "圖片反推使用的介面位址、密鑰和模型。",
     baseUrl: "介面位址",
@@ -132,10 +141,14 @@ const TEXT = {
     testing: "測試中...",
     saved: "設定已保存。",
     connected: "介面已連通。",
-    historyTitle: "本地保存記錄",
-    historyCopy: "點擊提示詞文字即可複製。上傳圖片會標記為上傳來源。",
-    emptyHistory: "還沒有保存記錄。",
+    historyTitle: "反推記錄",
+    historyCopy: "這裡會即時顯示後台反推進度。完成後點擊提示詞文字即可複製。",
+    emptyHistory: "還沒有反推記錄。",
     clearHistory: "清空記錄",
+    taskProgress: "任務進度",
+    taskDone: "已完成",
+    taskError: "失敗",
+    taskRunning: "進行中",
     delete: "刪除",
     source: "來源",
     uploaded: "上傳圖片",
@@ -145,10 +158,10 @@ const TEXT = {
   },
   ja: {
     console: "管理",
-    lead: "保存履歴、API 設定、環境設定、アカウント状態を管理します。",
+    lead: "逆引き記録、API 設定、環境設定、アカウント状態を管理します。",
     settings: "設定",
     settingsSub: "API、環境設定、アカウント",
-    history: "保存履歴",
+    history: "逆引き記録",
     historySub: "ローカル分析を確認",
     apiTitle: "API 設定",
     apiCopy: "画像分析に使う URL、キー、モデルを設定します。",
@@ -173,9 +186,9 @@ const TEXT = {
     testing: "テスト中...",
     saved: "設定を保存しました。",
     connected: "接続できます。",
-    historyTitle: "ローカル保存履歴",
+    historyTitle: "逆引き記録",
     historyCopy: "プロンプト本文をクリックするとコピーできます。アップロード画像はアップロード元として表示します。",
-    emptyHistory: "保存履歴はまだありません。",
+    emptyHistory: "逆引き記録はまだありません。",
     clearHistory: "履歴を消去",
     delete: "削除",
     source: "出典",
@@ -189,6 +202,7 @@ const TEXT = {
 const root = document.getElementById("root");
 let settings = { ...DEFAULTS };
 let historyEntries = [];
+let reverseTasks = [];
 let activeSection = sectionFromHash();
 let message = "";
 let messageTone = "";
@@ -255,7 +269,7 @@ function formatDate(timestamp) {
 }
 
 async function load() {
-  const stored = await chrome.storage.local.get([...SETTINGS_KEYS, HISTORY_KEY]);
+  const stored = await chrome.storage.local.get([...SETTINGS_KEYS, HISTORY_KEY, TASKS_KEY]);
   settings = {
     ...DEFAULTS,
     ...stored,
@@ -263,6 +277,7 @@ async function load() {
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
   };
   historyEntries = Array.isArray(stored[HISTORY_KEY]) ? stored[HISTORY_KEY] : [];
+  reverseTasks = Array.isArray(stored[TASKS_KEY]) ? stored[TASKS_KEY] : [];
   render();
 }
 
@@ -286,9 +301,11 @@ async function saveSettingsFromForm(testAfterSave = false) {
       message = t("saved");
     }
     messageTone = "success";
+    showToast(message, "success");
   } catch (error) {
     message = error instanceof Error ? error.message : String(error);
     messageTone = "error";
+    showToast(message, "error");
   } finally {
     saving = false;
     testing = false;
@@ -319,6 +336,12 @@ async function clearHistory() {
   await chrome.storage.local.set({ [HISTORY_KEY]: [] });
   await chrome.storage.local.remove(SNAPSHOT_KEY);
   render();
+}
+
+function statusLabel(status) {
+  if (status === "success") return t("taskDone");
+  if (status === "error") return t("taskError");
+  return t("taskRunning");
 }
 
 async function copyText(text) {
@@ -453,6 +476,30 @@ function renderSettingsView() {
 }
 
 function renderHistory() {
+  const visibleTasks = reverseTasks.slice(0, 12);
+  const taskRows = visibleTasks.map((task) => {
+    const progress = Math.max(0, Math.min(100, Math.round(Number(task.progress) || 0)));
+    const tone = task.status === "error" ? " is-error" : task.status === "success" ? " is-success" : "";
+    return `
+      <article class="task-card${tone}">
+        <div class="task-thumb">
+          ${task.imageSrc ? `<img src="${escapeHtml(task.imageSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : ""}
+        </div>
+        <div class="task-body">
+          <div class="record-meta">
+            <span>${escapeHtml(statusLabel(task.status))}</span>
+            <span>${escapeHtml(formatDate(task.updatedAt || task.createdAt || Date.now()))}</span>
+          </div>
+          <strong>${escapeHtml(task.title || t("imageUnavailable"))}</strong>
+          <div class="task-progress" aria-label="${escapeHtml(t("taskProgress"))}">
+            <span style="width:${progress}%"></span>
+          </div>
+          <p class="${task.status === "error" ? "message-error" : ""}">${escapeHtml(task.error || task.step || "")}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+
   const rows = historyEntries.slice(0, 80).map((entry) => {
     const prompt = promptFor(entry);
     const preview = prompt.length > 360 ? `${prompt.slice(0, 360).trimEnd()}...` : prompt;
@@ -495,6 +542,11 @@ function renderHistory() {
           ${escapeHtml(t("clearHistory"))}
         </button>
       </section>
+      ${taskRows ? `
+        <section class="task-list" aria-label="${escapeHtml(t("taskProgress"))}">
+          ${taskRows}
+        </section>
+      ` : ""}
       <div class="record-grid">
         ${rows || `<p class="empty-state">${escapeHtml(t("emptyHistory"))}</p>`}
       </div>
@@ -556,6 +608,7 @@ function bindEvents() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes[HISTORY_KEY]) historyEntries = Array.isArray(changes[HISTORY_KEY].newValue) ? changes[HISTORY_KEY].newValue : [];
+  if (changes[TASKS_KEY]) reverseTasks = Array.isArray(changes[TASKS_KEY].newValue) ? changes[TASKS_KEY].newValue : [];
   if (SETTINGS_KEYS.some((key) => changes[key])) {
     for (const key of SETTINGS_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue;

@@ -26,7 +26,6 @@
       "32": "icons/icon-32.png",
       "48": "icons/icon-48.png"
    },
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYzE32jh+71QfHJ/Cp+X50EukGg0QXqJrOaz6KueGqSq76bnaQNvb3uFB0ycH5XWeDvQsowFhSzeDRq1kIJ7yXYYNAdc+0AZ8eqySBKdG8gKabpg4yBFLBzyWySQmnE+UoDULbBwWMiuNyVgJzic+CcyO4zC4xFtqe8OWz5bpAa8Uhm50RQBMNyq4MocyjDq6MQ989UZGXCRBGEf7KzXYpQXTIjY4X3M8GE0ZdZjW0MGtEh72Yo4PNiOdUnjPGXB7Fy+fvvbEeQQljnDLmrsVgayhnNOuqIrkmV5I1p1YPKMx/VCyJ7yxdkdaysWoIYl/D/tlqaFWVEqIN3jIHxTMwIDAQAB",
    "manifest_version": 3,
    "name": "MX-Insight",
    "options_page": "options.html",

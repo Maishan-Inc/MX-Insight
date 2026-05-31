@@ -3,6 +3,7 @@ const OFF_BADGE = "OFF";
 const SETTINGS_KEY = "enabled";
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
+const TASKS_KEY = "reversePromptTasks";
 const IMAGE_FETCH_TIMEOUT_MS = 30000;
 const ANALYSIS_REQUEST_TIMEOUT_MS = 180000;
 const TEST_REQUEST_TIMEOUT_MS = 20000;
@@ -850,22 +851,27 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
   return extractJson(text);
 }
 
-async function analyze(config, target) {
+async function analyze(config, target, onProgress) {
   validateConfig(config);
+  await onProgress?.({ progress: 18, step: "读取图片" });
   const image = await readImagePayload(target);
+  await onProgress?.({ progress: 42, step: "发送至模型" });
   const ratio = aspectRatio(target);
 
   try {
     const analysis = providerKind(config.baseUrl) === "gemini"
       ? await callGemini(config, target, image, ratio)
       : await callOpenAICompatible(config, target, image, ratio);
+    await onProgress?.({ progress: 92, step: "生成提示词" });
     return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
   } catch (error) {
     if (!looksBrokenJson(error)) throw error;
     try {
+      await onProgress?.({ progress: 78, step: "校验输出，正在重试" });
       const analysis = providerKind(config.baseUrl) === "gemini"
         ? await callGemini(config, target, image, ratio, true)
         : await callOpenAICompatible(config, target, image, ratio, true);
+      await onProgress?.({ progress: 94, step: "生成提示词" });
       return { ...analysis, imagePreviewSrc: image.previewSrc || "" };
     } catch (retryError) {
       throw new Error(
@@ -879,9 +885,39 @@ function sanitizeHistoryEntries(value) {
   return Array.isArray(value) ? value.filter((entry) => entry && typeof entry === "object").slice(0, 79) : [];
 }
 
-async function saveUploadedAnalysis(target, analysis) {
+function sanitizeTasks(value) {
+  return Array.isArray(value) ? value.filter((task) => task && typeof task === "object").slice(0, 40) : [];
+}
+
+function taskTitle(target) {
+  const alt = typeof target?.alt === "string" ? target.alt.trim() : "";
+  if (alt) return alt.slice(0, 80);
+  try {
+    const url = new URL(target?.src || target?.pageUrl || "");
+    const file = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
+    return (file || url.hostname || "图片").slice(0, 80);
+  } catch {
+    return "图片";
+  }
+}
+
+async function upsertTask(patch) {
+  const stored = await chrome.storage.local.get(TASKS_KEY);
+  const tasks = sanitizeTasks(stored[TASKS_KEY]);
+  const existing = tasks.find((task) => task.id === patch.id);
+  const nextTask = {
+    ...(existing || {}),
+    ...patch,
+    updatedAt: Date.now(),
+  };
+  const next = [nextTask, ...tasks.filter((task) => task.id !== patch.id)].slice(0, 40);
+  await chrome.storage.local.set({ [TASKS_KEY]: next });
+  return nextTask;
+}
+
+async function saveReversePromptAnalysis(target, analysis, taskId) {
   const record = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: taskId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt: Date.now(),
     imageSrc: analysis.imagePreviewSrc || target.src,
     pageUrl: target.pageUrl || "#",
@@ -891,7 +927,7 @@ async function saveUploadedAnalysis(target, analysis) {
     promptDrafts: {},
   };
   const stored = await chrome.storage.local.get(HISTORY_KEY);
-  const history = [record, ...sanitizeHistoryEntries(stored[HISTORY_KEY])].slice(0, 80);
+  const history = [record, ...sanitizeHistoryEntries(stored[HISTORY_KEY]).filter((entry) => entry.id !== record.id)].slice(0, 80);
   await chrome.storage.local.set({
     [HISTORY_KEY]: history,
     [SNAPSHOT_KEY]: {
@@ -907,6 +943,10 @@ async function saveUploadedAnalysis(target, analysis) {
     },
   });
   return record;
+}
+
+async function saveUploadedAnalysis(target, analysis) {
+  return saveReversePromptAnalysis(target, analysis);
 }
 
 async function testConnection(config) {
@@ -1082,6 +1122,62 @@ async function openPanel(tabId, srcUrl, frameId, preferLatest = false) {
   }
 }
 
+async function startAnalysisTask(rawTarget, options = {}) {
+  const target = {
+    src: rawTarget.src,
+    alt: rawTarget.alt || "image",
+    pageUrl: rawTarget.pageUrl || "#",
+    naturalWidth: rawTarget.naturalWidth,
+    naturalHeight: rawTarget.naturalHeight,
+  };
+  const taskId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const createdAt = Date.now();
+  await upsertTask({
+    id: taskId,
+    status: "queued",
+    source: options.source || "page",
+    title: taskTitle(target),
+    imageSrc: target.src,
+    pageUrl: target.pageUrl,
+    progress: 5,
+    step: "已加入后台任务",
+    error: "",
+    createdAt,
+  });
+
+  (async () => {
+    try {
+      const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
+      await upsertTask({ id: taskId, status: "running", progress: 10, step: "准备分析", error: "" });
+      const analysis = await analyze(config, target, (progress) => (
+        upsertTask({ id: taskId, status: "running", error: "", ...progress })
+      ));
+      const record = await saveReversePromptAnalysis(target, analysis, taskId);
+      await upsertTask({
+        id: taskId,
+        status: "success",
+        progress: 100,
+        step: "反推完成",
+        error: "",
+        recordId: record.id,
+        imageSrc: record.imageSrc,
+        completedAt: Date.now(),
+      });
+    } catch (error) {
+      await upsertTask({
+        id: taskId,
+        status: "error",
+        progress: 100,
+        step: "反推失败",
+        error: error instanceof Error ? error.message : "分析失败，请稍后重试。",
+        completedAt: Date.now(),
+      });
+    }
+  })();
+
+  return { taskId };
+}
+
 chrome.runtime.onInstalled.addListener((details) => {
   refreshBadge();
   if (details.reason === "install") {
@@ -1113,9 +1209,36 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     (async () => {
       try {
         const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
-        respond({ ok: true, data: await analyze(config, message.payload.target) });
+        const target = message.payload?.target;
+        if (!target || typeof target.src !== "string") throw new Error("没有拿到可分析的图片。");
+        if (message.payload?.background === true) {
+          respond({ ok: true, data: await startAnalysisTask(target, { source: "page" }) });
+          return;
+        }
+        respond({ ok: true, data: await analyze(config, target) });
       } catch (error) {
         respond({ ok: false, error: error instanceof Error ? error.message : "分析失败，请稍后重试。" });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === "GET_ANALYSIS_TASK") {
+    (async () => {
+      try {
+        const taskId = message.payload?.taskId;
+        const stored = await chrome.storage.local.get(TASKS_KEY);
+        const task = sanitizeTasks(stored[TASKS_KEY]).find((item) => item.id === taskId);
+        if (!task) throw new Error("没有找到反推任务。");
+        const data = { task };
+        if (task.status === "success" && task.recordId) {
+          const history = sanitizeHistoryEntries((await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY]);
+          data.record = history.find((entry) => entry.id === task.recordId) || null;
+          data.analysis = data.record?.analysis || null;
+        }
+        respond({ ok: true, data });
+      } catch (error) {
+        respond({ ok: false, error: error instanceof Error ? error.message : "读取任务失败。" });
       }
     })();
     return true;
@@ -1137,18 +1260,16 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message.type === "ANALYZE_UPLOADED_IMAGE") {
     (async () => {
       try {
-        const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
         const target = message.payload?.target;
         if (!target || typeof target.src !== "string") throw new Error("没有拿到可分析的上传图片。");
-        const analysis = await analyze(config, {
+        const task = await startAnalysisTask({
           src: target.src,
           alt: target.alt || "uploaded image",
           pageUrl: target.pageUrl || "#",
           naturalWidth: target.naturalWidth,
           naturalHeight: target.naturalHeight,
-        });
-        const record = await saveUploadedAnalysis(target, analysis);
-        respond({ ok: true, data: { record } });
+        }, { source: "upload" });
+        respond({ ok: true, data: task });
       } catch (error) {
         respond({ ok: false, error: error instanceof Error ? error.message : "上传图片分析失败。" });
       }

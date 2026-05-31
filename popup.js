@@ -1,4 +1,5 @@
 const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage"];
+const TASKS_KEY = "reversePromptTasks";
 
 const DEFAULTS = {
   baseUrl: "",
@@ -27,12 +28,16 @@ const TEXT = {
     disabledCopy: "Page hover actions and image analysis are paused.",
     uploadImage: "Upload image analysis",
     analyzing: "Analyzing...",
-    uploadSaved: "Saved to local records.",
-    viewRecords: "Saved records",
+    uploadSaved: "Reverse prompt task started. Check Reverse records for progress.",
+    viewRecords: "Reverse records",
     settings: "Settings",
     language: "Language",
     toggleError: "Failed to update the switch.",
     panelError: "Analysis failed.",
+    taskProgress: "Progress",
+    taskDone: "Done",
+    taskError: "Failed",
+    taskRunning: "Running",
   },
   "zh-CN": {
     badge: "提示词洞察",
@@ -43,12 +48,16 @@ const TEXT = {
     disabledCopy: "网页悬浮操作和图片分析已暂停。",
     uploadImage: "上传图片分析",
     analyzing: "分析中...",
-    uploadSaved: "已保存到本地记录。",
-    viewRecords: "保存记录",
+    uploadSaved: "已加入反推任务，可在反推记录查看进度。",
+    viewRecords: "反推记录",
     settings: "设置",
     language: "语言",
     toggleError: "切换失败，请稍后重试。",
     panelError: "分析失败，请稍后重试。",
+    taskProgress: "反推进度",
+    taskDone: "完成",
+    taskError: "失败",
+    taskRunning: "进行中",
   },
   "zh-TW": {
     badge: "提示詞洞察",
@@ -59,8 +68,8 @@ const TEXT = {
     disabledCopy: "網頁懸浮操作和圖片分析已暫停。",
     uploadImage: "上傳圖片分析",
     analyzing: "分析中...",
-    uploadSaved: "已保存到本地記錄。",
-    viewRecords: "保存記錄",
+    uploadSaved: "已加入反推任務，可在反推記錄查看進度。",
+    viewRecords: "反推記錄",
     settings: "設定",
     language: "語言",
     toggleError: "切換失敗，請稍後重試。",
@@ -76,7 +85,7 @@ const TEXT = {
     uploadImage: "画像を分析",
     analyzing: "分析中...",
     uploadSaved: "ローカル履歴に保存しました。",
-    viewRecords: "保存履歴",
+    viewRecords: "逆引き記録",
     settings: "設定",
     language: "言語",
     toggleError: "切り替えに失敗しました。",
@@ -91,6 +100,7 @@ let busy = false;
 let uploadBusy = false;
 let message = "";
 let messageTone = "";
+let reverseTasks = [];
 
 function detectLanguage(value = settings.uiLanguage) {
   if (value && value !== "auto") return TEXT[value] ? value : "en";
@@ -115,13 +125,14 @@ function escapeHtml(value) {
 }
 
 async function loadSettings() {
-  const stored = await chrome.storage.local.get(SETTINGS_KEYS);
+  const stored = await chrome.storage.local.get([...SETTINGS_KEYS, TASKS_KEY]);
   settings = {
     ...DEFAULTS,
     ...stored,
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : true,
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
   };
+  reverseTasks = Array.isArray(stored[TASKS_KEY]) ? stored[TASKS_KEY] : [];
   ready = true;
   render();
 }
@@ -227,6 +238,34 @@ async function openOptions(section = "settings") {
   window.close();
 }
 
+function taskLabel(status) {
+  if (status === "success") return t("taskDone");
+  if (status === "error") return t("taskError");
+  return t("taskRunning");
+}
+
+function renderTasks() {
+  const tasks = reverseTasks.slice(0, 3);
+  if (!tasks.length) return "";
+  return `
+    <section class="popup-task-list" aria-label="${escapeHtml(t("taskProgress"))}">
+      ${tasks.map((task) => {
+        const progress = Math.max(0, Math.min(100, Math.round(Number(task.progress) || 0)));
+        return `
+          <article class="popup-task ${task.status === "error" ? "is-error" : task.status === "success" ? "is-success" : ""}">
+            <div class="popup-task-meta">
+              <span>${escapeHtml(taskLabel(task.status))}</span>
+              <strong>${progress}%</strong>
+            </div>
+            <div class="task-progress"><span style="width:${progress}%"></span></div>
+            <p>${escapeHtml(task.error || task.step || task.title || "")}</p>
+          </article>
+        `;
+      }).join("")}
+    </section>
+  `;
+}
+
 function render() {
   const lang = detectLanguage();
   const langOptions = LANGUAGES.map((item) => (
@@ -267,6 +306,8 @@ function render() {
         </button>
         <input id="upload-input" type="file" accept="image/*" hidden />
 
+        ${renderTasks()}
+
         <div class="popup-actions">
           <button type="button" class="secondary-action" id="view-records">${escapeHtml(t("viewRecords"))}</button>
           <button type="button" class="secondary-action" id="open-settings">${escapeHtml(t("settings"))}</button>
@@ -294,3 +335,11 @@ function render() {
 
 render();
 loadSettings();
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes[TASKS_KEY]) {
+    reverseTasks = Array.isArray(changes[TASKS_KEY].newValue) ? changes[TASKS_KEY].newValue : [];
+    render();
+  }
+});
