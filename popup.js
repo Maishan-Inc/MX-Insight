@@ -278,7 +278,7 @@ function taskStep(task) {
 }
 
 function renderTasks() {
-  const tasks = sortTasks(reverseTasks).slice(0, 4);
+  const tasks = sortTasks(reverseTasks).slice(0, 2);
   if (!tasks.length) return "";
   return `
     <section class="popup-task-list" aria-label="${escapeHtml(t("taskProgress"))}">

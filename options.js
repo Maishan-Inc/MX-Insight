@@ -432,7 +432,11 @@ async function setEnabled(value) {
 
 async function deleteRecord(id) {
   historyEntries = historyEntries.filter((entry) => entry.id !== id);
-  await chrome.storage.local.set({ [HISTORY_KEY]: historyEntries });
+  reverseTasks = reverseTasks.filter((task) => task.recordId !== id);
+  await chrome.storage.local.set({
+    [HISTORY_KEY]: historyEntries,
+    [TASKS_KEY]: reverseTasks,
+  });
   render();
 }
 
