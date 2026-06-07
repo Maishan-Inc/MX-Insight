@@ -1,4 +1,4 @@
-const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage"];
+const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage", "themeMode"];
 const TASKS_KEY = "reversePromptTasks";
 
 const DEFAULTS = {
@@ -8,6 +8,7 @@ const DEFAULTS = {
   enabled: true,
   defaultGeneratorSite: "jimeng",
   uiLanguage: "auto",
+  themeMode: "",
 };
 
 const LANGUAGES = [
@@ -110,6 +111,20 @@ let message = "";
 let messageTone = "";
 let reverseTasks = [];
 
+function systemThemeMode() {
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+}
+
+function normalizeThemeMode(value) {
+  return value === "light" || value === "dark" ? value : systemThemeMode();
+}
+
+function applyThemeMode(value = settings.themeMode) {
+  const themeMode = normalizeThemeMode(value);
+  document.documentElement.dataset.theme = themeMode;
+  return themeMode;
+}
+
 function detectLanguage(value = settings.uiLanguage) {
   if (value && value !== "auto") return TEXT[value] ? value : "en";
   const nav = navigator.language || "en";
@@ -149,7 +164,9 @@ async function loadSettings() {
     ...stored,
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : true,
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
+    themeMode: normalizeThemeMode(stored.themeMode),
   };
+  applyThemeMode(settings.themeMode);
   reverseTasks = sortTasks(stored[TASKS_KEY]);
   ready = true;
   render();
@@ -247,6 +264,19 @@ async function saveLanguage(value) {
   render();
 }
 
+async function toggleThemeMode() {
+  const current = normalizeThemeMode(settings.themeMode);
+  const themeMode = current === "dark" ? "light" : "dark";
+  settings = { ...settings, themeMode };
+  applyThemeMode(themeMode);
+  render();
+  try {
+    await chrome.storage.local.set({ themeMode });
+  } catch {
+    render();
+  }
+}
+
 async function openOptions(section = "settings") {
   try {
     await chrome.runtime.sendMessage({ type: "OPEN_SETTINGS", payload: { focus: section === "history" ? "history" : "base-url" } });
@@ -301,6 +331,8 @@ function renderTasks() {
 
 function render() {
   const lang = detectLanguage();
+  const themeMode = normalizeThemeMode(settings.themeMode);
+  const nextThemeLabel = themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode";
   const langOptions = LANGUAGES.map((item) => (
     `<option value="${item.value}" ${settings.uiLanguage === item.value ? "selected" : ""}>${escapeHtml(item.labels[lang] || item.labels.en)}</option>`
   )).join("");
@@ -309,11 +341,16 @@ function render() {
     <main class="popup-shell">
       <section class="popup-card" aria-label="MX-Insight">
         <header class="popup-header">
-          <img src="/icons/icon-128.png" alt="" class="popup-logo" />
-          <div>
-            <div class="popup-eyebrow">MX-Insight</div>
-            <h1>${escapeHtml(t("badge"))}</h1>
+          <div class="popup-brand">
+            <img src="/icons/icon-128.png" alt="" class="popup-logo" />
+            <div>
+              <div class="popup-eyebrow">MX-Insight</div>
+              <h1>${escapeHtml(t("badge"))}</h1>
+            </div>
           </div>
+          <button type="button" class="theme-toggle-button" id="theme-toggle" aria-label="${escapeHtml(nextThemeLabel)}" title="${escapeHtml(nextThemeLabel)}" aria-pressed="${themeMode === "dark" ? "true" : "false"}">
+            <span aria-hidden="true">${themeMode === "dark" ? "☀" : "☾"}</span>
+          </button>
         </header>
 
         <section class="popup-status-card">
@@ -353,6 +390,7 @@ function render() {
   `;
 
   document.getElementById("toggle")?.addEventListener("click", setEnabled);
+  document.getElementById("theme-toggle")?.addEventListener("click", toggleThemeMode);
   document.getElementById("open-settings")?.addEventListener("click", () => openOptions("settings"));
   document.getElementById("view-records")?.addEventListener("click", () => openOptions("history"));
   const uploadInput = document.getElementById("upload-input");
@@ -367,10 +405,16 @@ function render() {
 }
 
 render();
+applyThemeMode();
 loadSettings();
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.themeMode) {
+    settings = { ...settings, themeMode: normalizeThemeMode(changes.themeMode.newValue) };
+    applyThemeMode(settings.themeMode);
+    render();
+  }
   if (changes[TASKS_KEY]) {
     reverseTasks = sortTasks(changes[TASKS_KEY].newValue);
     render();

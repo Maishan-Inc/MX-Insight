@@ -1,4 +1,4 @@
-const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage"];
+const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage", "themeMode"];
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
 const TASKS_KEY = "reversePromptTasks";
@@ -10,6 +10,7 @@ const DEFAULTS = {
   enabled: true,
   defaultGeneratorSite: "jimeng",
   uiLanguage: "auto",
+  themeMode: "",
 };
 
 const LANGUAGES = [
@@ -255,6 +256,20 @@ let recordPromptLanguages = {};
 
 document.body.dataset.page = "options";
 
+function systemThemeMode() {
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+}
+
+function normalizeThemeMode(value) {
+  return value === "light" || value === "dark" ? value : systemThemeMode();
+}
+
+function applyThemeMode(value = settings.themeMode) {
+  const themeMode = normalizeThemeMode(value);
+  document.documentElement.dataset.theme = themeMode;
+  return themeMode;
+}
+
 function sectionFromHash(hash = location.hash) {
   if (hash === "#history") return "history";
   return "settings";
@@ -380,7 +395,9 @@ async function load() {
     ...stored,
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : true,
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
+    themeMode: normalizeThemeMode(stored.themeMode),
   };
+  applyThemeMode(settings.themeMode);
   historyEntries = Array.isArray(stored[HISTORY_KEY]) ? stored[HISTORY_KEY] : [];
   reverseTasks = sortTasks(stored[TASKS_KEY]);
   render();
@@ -763,8 +780,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
     for (const key of SETTINGS_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue;
     }
+    settings.themeMode = normalizeThemeMode(settings.themeMode);
+    applyThemeMode(settings.themeMode);
   }
   render();
 });
 
+applyThemeMode();
 load();
