@@ -547,10 +547,15 @@ a {
 }
 
 .popup-message,
-.message {
+.message,
+.settings-hint {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.settings-hint {
+  color: var(--muted);
 }
 
 .copyright,

@@ -9,6 +9,8 @@ const ANALYSIS_REQUEST_TIMEOUT_MS = 180000;
 const TEST_REQUEST_TIMEOUT_MS = 20000;
 const OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS = 5200;
 const OPENAI_ANALYSIS_RETRY_MAX_OUTPUT_TOKENS = 3600;
+const TOP_INTERMEDIATE_MAX_OUTPUT_TOKENS = 2600;
+const TOP_FINAL_MAX_OUTPUT_TOKENS = 6200;
 const MAX_IMAGE_SIDE = 2200;
 const HISTORY_PREVIEW_MAX_SIDE = 720;
 const JPEG_QUALITY = 0.92;
@@ -498,6 +500,10 @@ function validateConfig(config) {
   if (!config.model.trim()) throw new Error("请先在设置页填写支持图片分析的模型名。");
 }
 
+function normalizeReversePerformance(value) {
+  return value === "top" ? "top" : "standard";
+}
+
 function requestError(kind, config, error) {
   const label = kind === "test" ? "连接测试" : "分析请求";
   const detail = error instanceof Error && error.message ? error.message : "unknown error";
@@ -736,6 +742,265 @@ function buildOpenAiChatBody(model, target, image, ratio, compact = false, strea
   return body;
 }
 
+function buildOpenAiCustomBody(model, prompt, image, maxTokens, options = {}) {
+  const body = {
+    model,
+    temperature: 0.16,
+    stream: false,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: toDataUrl(image.mimeType, image.data) } },
+        ],
+      },
+    ],
+  };
+  body[options.tokenParam || openAiTokenParam(model)] = maxTokens;
+  if (options.responseFormat !== false) body.response_format = { type: "json_object" };
+  return body;
+}
+
+function parseJsonObjectText(text) {
+  const stripped = stripFence(text);
+  if (!stripped) throw new Error("接口没有返回可解析的 JSON 内容。");
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  const jsonText = start >= 0 && end > start ? stripped.slice(start, end + 1) : stripped;
+  const parsed = JSON.parse(jsonText);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("JSON 顶层不是对象。");
+  return parsed;
+}
+
+async function callGeminiCustomText(config, image, prompt, maxTokens, responseSchema = null) {
+  const url = `${trimUrl(config.baseUrl)}/models/${config.model.trim()}:generateContent?key=${encodeURIComponent(config.apiKey.trim())}`;
+  let payload;
+  try {
+    payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+      const generationConfig = {
+        temperature: 0.16,
+        maxOutputTokens: maxTokens,
+        responseMimeType: "application/json",
+      };
+      if (responseSchema) generationConfig.responseJsonSchema = responseSchema;
+      const response = await fetch(url, {
+        signal,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }, { inlineData: { mimeType: image.mimeType, data: image.data } }],
+            },
+          ],
+          generationConfig,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+      }
+      return response.json();
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("分析请求失败")) throw error;
+    throw requestError("analysis", config, error);
+  }
+  return extractTextParts(payload);
+}
+
+async function callOpenAICustomText(config, image, prompt, maxTokens) {
+  const url = `${trimUrl(config.baseUrl)}/chat/completions`;
+  const model = modelName(config);
+  try {
+    const payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+      const response = await fetch(url, {
+        signal,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.apiKey.trim()}`,
+        },
+        body: JSON.stringify(buildOpenAiCustomBody(model, prompt, image, maxTokens)),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+      }
+      return response.json();
+    });
+    return extractOpenAiText(payload);
+  } catch {
+    try {
+      const payload = await withTimeout(ANALYSIS_REQUEST_TIMEOUT_MS, "分析请求超时（180 秒），请稍后重试或换用响应更快的模型。", async (signal) => {
+        const response = await fetch(url, {
+          signal,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${config.apiKey.trim()}`,
+          },
+          body: JSON.stringify(buildOpenAiCustomBody(model, prompt, image, maxTokens, { responseFormat: false, tokenParam: "max_tokens" })),
+        });
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`分析请求失败 (${response.status}) ${body || response.statusText}`.trim());
+        }
+        return response.json();
+      });
+      return extractOpenAiText(payload);
+    } catch (fallbackError) {
+      if (fallbackError instanceof Error && fallbackError.message.startsWith("分析请求失败")) throw fallbackError;
+      throw requestError("analysis", config, fallbackError);
+    }
+  }
+}
+
+async function callVisionJsonObject(config, image, prompt, maxTokens, responseSchema = null) {
+  const text = providerKind(config.baseUrl) === "gemini"
+    ? await callGeminiCustomText(config, image, prompt, maxTokens, responseSchema)
+    : await callOpenAICustomText(config, image, prompt, maxTokens);
+  return parseJsonObjectText(text);
+}
+
+function compactJson(value) {
+  return JSON.stringify(value, null, 2);
+}
+
+function buildTopSourcePrompt(target, ratio) {
+  return `
+${SYSTEM_PROMPT}
+
+Stage 1 of top-quality reverse prompt analysis.
+Analyze the image only for source/type identification. Do not generate the final prompt yet.
+
+Return JSON only:
+{
+  "image_type": "anime_illustration | game_screenshot | real_photo | ai_art | design_poster | 3d_render | unknown",
+  "source_guess": "Cautious source/type guess based only on visible evidence.",
+  "source_confidence": 0.0,
+  "source_evidence": ["visible clue 1", "visible clue 2", "visible clue 3"],
+  "uncertain_items": ["uncertain item 1", "uncertain item 2"],
+  "prompt_strategy": "How later prompt stages should analyze and write this image."
+}
+
+Rules:
+- Do not claim a specific IP, franchise, character, studio, game title, artist, brand, logo or exact text unless clearly visible and strongly supported.
+- Low-confidence guesses belong only in source_guess or uncertain_items.
+- source_evidence must be concrete visible evidence.
+- source_confidence must be a number from 0 to 1.
+
+Page URL: ${target.pageUrl}
+Alt text: ${target.alt || "N/A"}
+Image size: ${target.naturalWidth || "unknown"}x${target.naturalHeight || "unknown"}
+Aspect ratio: ${ratio}
+`.trim();
+}
+
+function buildTopDeepPrompt(target, ratio, source) {
+  return `
+${SYSTEM_PROMPT}
+
+Stage 2 of top-quality reverse prompt analysis.
+Use the provided image and Stage 1 source analysis to perform a deep visual inspection. Do not generate the final prompt yet.
+
+Stage 1 source analysis:
+${compactJson(source)}
+
+Return JSON only:
+{
+  "subject": "Exhaustive subject analysis with count, identity category, scale, visible attributes and role.",
+  "action_pose": "Detailed pose, action, gaze, expression, gesture, body orientation and object placement.",
+  "details_appearance": "Hair, eyes, face, clothing, anatomy, props, accessories, markings, silhouette, condition, design cues and small visible details.",
+  "environment_background": "Foreground, midground, background, setting, spatial relationships, depth cues and surrounding objects.",
+  "lighting_atmosphere": "Light direction, source quality, contrast, shadow softness, color temperature, atmosphere, weather and mood.",
+  "composition_framing": "Shot distance, camera angle, crop, perspective, subject placement, negative space, focal emphasis and framing logic.",
+  "style_camera": "Visual medium, stylization level, anime/game/photo/3D/poster cues, lens or render feel and post-processing.",
+  "colors": ["primary color", "secondary color", "accent color"],
+  "materials": ["material 1", "material 2", "surface finish"],
+  "quality_modifiers": ["specific quality cue", "specific finish cue", "specific rendering cue"],
+  "likely_generation_intent": "What the original creator likely optimized for.",
+  "must_keep_details": ["detail that must appear in final prompt", "detail that must appear in final prompt"],
+  "avoid_in_final_prompt": ["unsupported guess or misleading wording to avoid"]
+}
+
+Rules:
+- Be more detailed than a caption. This is the evidence base for final prompt generation.
+- Use Stage 1 to choose the correct analysis vocabulary.
+- Separate visible facts from uncertain source guesses.
+- If anime/game/poster/3D cues are visible, analyze them explicitly.
+
+Page URL: ${target.pageUrl}
+Alt text: ${target.alt || "N/A"}
+Image size: ${target.naturalWidth || "unknown"}x${target.naturalHeight || "unknown"}
+Aspect ratio: ${ratio}
+`.trim();
+}
+
+function buildTopGenerationPrompt(target, ratio, source, deep) {
+  return `
+${PROMPT_SCHEMA_TEXT}
+
+Stage 3 of top-quality reverse prompt analysis.
+Generate the final multilingual reverse-prompt JSON using the image, Stage 1 source analysis and Stage 2 deep analysis.
+
+Stage 1 source analysis:
+${compactJson(source)}
+
+Stage 2 deep analysis:
+${compactJson(deep)}
+
+Rules for this stage:
+- Return exactly the final schema requested above.
+- Integrate source.image_type, source.source_guess, source.source_confidence, source.source_evidence and source.prompt_strategy into json_prompt.
+- The final prompts must preserve deep.must_keep_details.
+- Do not put low-confidence source guesses into recreation_prompt or prompt_core as facts.
+- Make recreation_prompt dense and reproduction-oriented.
+
+Page URL: ${target.pageUrl}
+Alt text: ${target.alt || "N/A"}
+Image size: ${target.naturalWidth || "unknown"}x${target.naturalHeight || "unknown"}
+Aspect ratio: ${ratio}
+`.trim();
+}
+
+function buildTopRefinementPrompt(target, ratio, source, deep, draft) {
+  return `
+${PROMPT_SCHEMA_TEXT}
+
+Stage 4 of top-quality reverse prompt analysis.
+Self-review and rewrite the final reverse-prompt JSON. Compare the draft against Stage 1 and Stage 2.
+
+Stage 1 source analysis:
+${compactJson(source)}
+
+Stage 2 deep analysis:
+${compactJson(deep)}
+
+Draft final result:
+${compactJson(draft)}
+
+Return JSON only in the same final schema.
+
+Review requirements:
+- Add missing important visual details from Stage 2.
+- Preserve composition, lighting, background, material and style cues.
+- Remove unsupported source guesses from final prompts.
+- Reduce generic filler and increase concrete visual density.
+- Keep all language fields in the correct language.
+- Keep json_prompt compatible with the requested schema.
+
+Page URL: ${target.pageUrl}
+Alt text: ${target.alt || "N/A"}
+Image size: ${target.naturalWidth || "unknown"}x${target.naturalHeight || "unknown"}
+Aspect ratio: ${ratio}
+`.trim();
+}
+
 async function readOpenAiStream(response) {
   if (!response.body) throw new Error("接口没有返回可读取的流式内容。");
   const reader = response.body.getReader();
@@ -893,12 +1158,7 @@ async function callOpenAICompatible(config, target, image, ratio, compact = fals
   return extractJson(text);
 }
 
-async function analyze(config, target, onProgress) {
-  validateConfig(config);
-  await onProgress?.({ progress: 18, stepKey: "readImage", step: "读取图片" });
-  const image = await readImagePayload(target);
-  await onProgress?.({ progress: 42, stepKey: "sendModel", step: "发送至模型" });
-  const ratio = aspectRatio(target);
+async function analyzeStandardWithImage(config, target, image, ratio, onProgress) {
   let modelProgress = 42;
   let heartbeat = null;
   const startModelHeartbeat = () => {
@@ -939,6 +1199,86 @@ async function analyze(config, target, onProgress) {
       );
     }
   }
+}
+
+function fallbackSourceAnalysis(error) {
+  return {
+    image_type: "unknown",
+    source_guess: "unknown image source",
+    source_confidence: 0,
+    source_evidence: [],
+    uncertain_items: [error instanceof Error ? error.message : "source identification failed"],
+    prompt_strategy: "Use a conservative general visual reconstruction strategy based only on visible evidence.",
+  };
+}
+
+async function analyzeTopWithImage(config, target, image, ratio, onProgress) {
+  let source;
+  try {
+    await onProgress?.({ progress: 45, stepKey: "identifySource", step: "识别图片类型与可能来源" });
+    source = await callVisionJsonObject(config, image, buildTopSourcePrompt(target, ratio), TOP_INTERMEDIATE_MAX_OUTPUT_TOKENS);
+  } catch (error) {
+    source = fallbackSourceAnalysis(error);
+  }
+
+  let deep;
+  try {
+    await onProgress?.({ progress: 58, stepKey: "deepAnalyze", step: "深度分析图片细节" });
+    deep = await callVisionJsonObject(config, image, buildTopDeepPrompt(target, ratio, source), TOP_INTERMEDIATE_MAX_OUTPUT_TOKENS);
+  } catch {
+    const standard = await analyzeStandardWithImage(config, target, image, ratio, onProgress);
+    return {
+      ...standard,
+      analysisMeta: {
+        performance: "top",
+        fallback: "standard_after_deep_analysis_failure",
+        source,
+      },
+    };
+  }
+
+  await onProgress?.({ progress: 72, stepKey: "generatePrompt", step: "生成反推提示词" });
+  const generatedPayload = await callVisionJsonObject(config, image, buildTopGenerationPrompt(target, ratio, source, deep), TOP_FINAL_MAX_OUTPUT_TOKENS, RESPONSE_SCHEMA);
+  const generated = parseResponse(generatedPayload);
+
+  try {
+    await onProgress?.({ progress: 86, stepKey: "refinePrompt", step: "自检并优化提示词" });
+    const refinedPayload = await callVisionJsonObject(config, image, buildTopRefinementPrompt(target, ratio, source, deep, generatedPayload), TOP_FINAL_MAX_OUTPUT_TOKENS, RESPONSE_SCHEMA);
+    const refined = parseResponse(refinedPayload);
+    return {
+      ...refined,
+      imagePreviewSrc: image.previewSrc || "",
+      analysisMeta: {
+        performance: "top",
+        source,
+        deepAnalysis: deep,
+        refinementStatus: "refined",
+      },
+    };
+  } catch (error) {
+    return {
+      ...generated,
+      imagePreviewSrc: image.previewSrc || "",
+      analysisMeta: {
+        performance: "top",
+        source,
+        deepAnalysis: deep,
+        refinementStatus: "failed_kept_generated",
+        refinementError: error instanceof Error ? error.message : "refinement failed",
+      },
+    };
+  }
+}
+
+async function analyze(config, target, onProgress) {
+  validateConfig(config);
+  await onProgress?.({ progress: 18, stepKey: "readImage", step: "读取图片" });
+  const image = await readImagePayload(target);
+  await onProgress?.({ progress: 42, stepKey: "sendModel", step: "发送至模型" });
+  const ratio = aspectRatio(target);
+  return normalizeReversePerformance(config.reversePerformance) === "top"
+    ? analyzeTopWithImage(config, target, image, ratio, onProgress)
+    : analyzeStandardWithImage(config, target, image, ratio, onProgress);
 }
 
 function sanitizeHistoryEntries(value) {
@@ -1269,7 +1609,7 @@ async function startAnalysisTask(rawTarget, options = {}) {
           completedAt: Date.now(),
         });
       }, ANALYSIS_REQUEST_TIMEOUT_MS + IMAGE_FETCH_TIMEOUT_MS + 30000);
-      const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
+      const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model", "reversePerformance"]);
       await upsertTask({ id: taskId, status: "running", progress: 10, stepKey: "prepare", step: "准备分析", error: "" });
       const analysis = await analyze(config, target, (progress) => (
         upsertTask({ id: taskId, status: "running", error: "", ...progress })
@@ -1335,7 +1675,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message.type === "RUN_ANALYSIS") {
     (async () => {
       try {
-        const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model"]);
+        const config = await chrome.storage.local.get(["baseUrl", "apiKey", "model", "reversePerformance"]);
         const target = message.payload?.target;
         if (!target || typeof target.src !== "string") throw new Error("没有拿到可分析的图片。");
         if (message.payload?.background === true) {

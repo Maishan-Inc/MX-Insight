@@ -301,6 +301,9 @@ function taskStep(task) {
     generatePrompt: { en: "Generating prompt", "zh-CN": "生成提示词", "zh-TW": "生成提示詞", ja: "プロンプト生成中" },
     retryJson: { en: "Checking output, retrying", "zh-CN": "校验输出，正在重试", "zh-TW": "校驗輸出，正在重試", ja: "出力確認、再試行中" },
     prepare: { en: "Preparing analysis", "zh-CN": "准备分析", "zh-TW": "準備分析", ja: "分析準備中" },
+    identifySource: { en: "Identifying source", "zh-CN": "识别来源", "zh-TW": "識別來源", ja: "出典を推定中" },
+    deepAnalyze: { en: "Deep analysis", "zh-CN": "深度分析", "zh-TW": "深度分析", ja: "詳細分析中" },
+    refinePrompt: { en: "Refining prompt", "zh-CN": "自检优化", "zh-TW": "自檢優化", ja: "プロンプト修正中" },
     complete: { en: "Reverse prompt complete", "zh-CN": "反推完成", "zh-TW": "反推完成", ja: "逆引き完了" },
     failed: { en: "Reverse prompt failed", "zh-CN": "反推失败", "zh-TW": "反推失敗", ja: "逆引き失敗" },
   };

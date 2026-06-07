@@ -1,4 +1,4 @@
-const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage", "themeMode"];
+const SETTINGS_KEYS = ["baseUrl", "apiKey", "model", "enabled", "defaultGeneratorSite", "uiLanguage", "themeMode", "reversePerformance"];
 const HISTORY_KEY = "historyEntries";
 const SNAPSHOT_KEY = "latestAnalysisSnapshot";
 const TASKS_KEY = "reversePromptTasks";
@@ -11,6 +11,7 @@ const DEFAULTS = {
   defaultGeneratorSite: "jimeng",
   uiLanguage: "auto",
   themeMode: "",
+  reversePerformance: "standard",
 };
 
 const LANGUAGES = [
@@ -39,6 +40,10 @@ const TEXT = {
     modelPlaceholder: "gpt-5.5 / gemini-2.5-flash / qwen-vl-max",
     preferencesTitle: "Preferences",
     language: "Language",
+    reversePerformance: "Reverse performance",
+    reversePerformanceStandard: "Standard",
+    reversePerformanceTop: "Top",
+    reversePerformanceHint: "Top mode uses multiple API calls for source identification, deep analysis, prompt generation, and refinement.",
     status: "Extension switch",
     enabled: "Enabled",
     disabled: "Paused",
@@ -67,6 +72,9 @@ const TEXT = {
     taskGeneratePrompt: "Generating prompt",
     taskRetryJson: "Checking output, retrying",
     taskPrepare: "Preparing analysis",
+    taskIdentifySource: "Identifying source",
+    taskDeepAnalyze: "Deep analysis",
+    taskRefinePrompt: "Refining prompt",
     taskComplete: "Reverse prompt complete",
     taskFailed: "Reverse prompt failed",
     delete: "Delete",
@@ -93,6 +101,10 @@ const TEXT = {
     modelPlaceholder: "请输入支持图片分析的模型名称",
     preferencesTitle: "偏好设置",
     language: "语言",
+    reversePerformance: "反推性能",
+    reversePerformanceStandard: "标准",
+    reversePerformanceTop: "顶级",
+    reversePerformanceHint: "顶级模式会多次调用 API，依次识别来源、深度分析、生成提示词并自检优化。",
     status: "插件开关",
     enabled: "开启",
     disabled: "暂停",
@@ -121,6 +133,9 @@ const TEXT = {
     taskGeneratePrompt: "生成提示词",
     taskRetryJson: "校验输出，正在重试",
     taskPrepare: "准备分析",
+    taskIdentifySource: "识别来源",
+    taskDeepAnalyze: "深度分析",
+    taskRefinePrompt: "自检优化",
     taskComplete: "反推完成",
     taskFailed: "反推失败",
     delete: "删除",
@@ -147,6 +162,10 @@ const TEXT = {
     modelPlaceholder: "請輸入支援圖片分析的模型名稱",
     preferencesTitle: "偏好設定",
     language: "語言",
+    reversePerformance: "反推性能",
+    reversePerformanceStandard: "標準",
+    reversePerformanceTop: "頂級",
+    reversePerformanceHint: "頂級模式會多次呼叫 API，依次識別來源、深度分析、生成提示詞並自檢優化。",
     status: "插件開關",
     enabled: "開啟",
     disabled: "暫停",
@@ -175,6 +194,9 @@ const TEXT = {
     taskGeneratePrompt: "生成提示詞",
     taskRetryJson: "校驗輸出，正在重試",
     taskPrepare: "準備分析",
+    taskIdentifySource: "識別來源",
+    taskDeepAnalyze: "深度分析",
+    taskRefinePrompt: "自檢優化",
     taskComplete: "反推完成",
     taskFailed: "反推失敗",
     delete: "刪除",
@@ -201,6 +223,10 @@ const TEXT = {
     modelPlaceholder: "gpt-5.5 / gemini-2.5-flash / qwen-vl-max",
     preferencesTitle: "環境設定",
     language: "言語",
+    reversePerformance: "逆引き性能",
+    reversePerformanceStandard: "標準",
+    reversePerformanceTop: "トップ",
+    reversePerformanceHint: "トップモードは複数回 API を呼び出し、出典推定、詳細分析、プロンプト生成、自己修正を行います。",
     status: "拡張機能",
     enabled: "有効",
     disabled: "停止",
@@ -229,6 +255,9 @@ const TEXT = {
     taskGeneratePrompt: "プロンプト生成中",
     taskRetryJson: "出力確認、再試行中",
     taskPrepare: "分析準備中",
+    taskIdentifySource: "出典を推定中",
+    taskDeepAnalyze: "詳細分析中",
+    taskRefinePrompt: "プロンプト修正中",
     taskComplete: "逆引き完了",
     taskFailed: "逆引き失敗",
     delete: "削除",
@@ -268,6 +297,10 @@ function applyThemeMode(value = settings.themeMode) {
   const themeMode = normalizeThemeMode(value);
   document.documentElement.dataset.theme = themeMode;
   return themeMode;
+}
+
+function normalizeReversePerformance(value) {
+  return value === "top" ? "top" : "standard";
 }
 
 function sectionFromHash(hash = location.hash) {
@@ -401,6 +434,7 @@ async function load() {
     enabled: typeof stored.enabled === "boolean" ? stored.enabled : true,
     uiLanguage: typeof stored.uiLanguage === "string" ? stored.uiLanguage : "auto",
     themeMode: normalizeThemeMode(stored.themeMode),
+    reversePerformance: normalizeReversePerformance(stored.reversePerformance),
   };
   applyThemeMode(settings.themeMode);
   historyEntries = Array.isArray(stored[HISTORY_KEY]) ? stored[HISTORY_KEY] : [];
@@ -412,7 +446,8 @@ async function saveSettingsFromForm(testAfterSave = false) {
   const baseUrl = document.getElementById("base-url")?.value.trim() || "";
   const apiKey = document.getElementById("api-key")?.value.trim() || "";
   const model = document.getElementById("model")?.value.trim() || "";
-  const next = { baseUrl, apiKey, model };
+  const reversePerformance = normalizeReversePerformance(document.getElementById("reverse-performance")?.value);
+  const next = { baseUrl, apiKey, model, reversePerformance };
   saving = !testAfterSave;
   testing = testAfterSave;
   message = "";
@@ -452,6 +487,13 @@ async function setEnabled(value) {
   render();
 }
 
+async function setReversePerformance(value) {
+  const reversePerformance = normalizeReversePerformance(value);
+  settings = { ...settings, reversePerformance };
+  await chrome.storage.local.set({ reversePerformance });
+  render();
+}
+
 async function deleteRecord(id) {
   historyEntries = historyEntries.filter((entry) => entry.id !== id);
   reverseTasks = reverseTasks.filter((task) => task.recordId !== id);
@@ -484,6 +526,9 @@ function stepLabel(task) {
     generatePrompt: "taskGeneratePrompt",
     retryJson: "taskRetryJson",
     prepare: "taskPrepare",
+    identifySource: "taskIdentifySource",
+    deepAnalyze: "taskDeepAnalyze",
+    refinePrompt: "taskRefinePrompt",
     complete: "taskComplete",
     failed: "taskFailed",
   };
@@ -612,6 +657,14 @@ function renderSettingsView() {
           <span>${escapeHtml(t("language"))}</span>
           <select id="language-select">${renderLanguageOptions()}</select>
         </label>
+        <label class="compact-field">
+          <span>${escapeHtml(t("reversePerformance"))}</span>
+          <select id="reverse-performance">
+            <option value="standard" ${settings.reversePerformance !== "top" ? "selected" : ""}>${escapeHtml(t("reversePerformanceStandard"))}</option>
+            <option value="top" ${settings.reversePerformance === "top" ? "selected" : ""}>${escapeHtml(t("reversePerformanceTop"))}</option>
+          </select>
+        </label>
+        <p class="settings-hint">${escapeHtml(t("reversePerformanceHint"))}</p>
         <div class="preference-row">
           <div>
             <span>${escapeHtml(t("status"))}</span>
@@ -742,6 +795,7 @@ function bindEvents() {
   });
   document.getElementById("test-connection")?.addEventListener("click", () => saveSettingsFromForm(true));
   document.getElementById("language-select")?.addEventListener("change", (event) => setLanguage(event.target.value));
+  document.getElementById("reverse-performance")?.addEventListener("change", (event) => setReversePerformance(event.target.value));
   document.getElementById("status-toggle")?.addEventListener("click", () => setEnabled(!settings.enabled));
   document.getElementById("clear-history")?.addEventListener("click", clearHistory);
   document.querySelectorAll("[data-section]").forEach((button) => {
@@ -786,6 +840,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
       if (changes[key]) settings[key] = changes[key].newValue;
     }
     settings.themeMode = normalizeThemeMode(settings.themeMode);
+    settings.reversePerformance = normalizeReversePerformance(settings.reversePerformance);
     applyThemeMode(settings.themeMode);
   }
   render();
