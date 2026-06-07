@@ -337,6 +337,11 @@ function jsonPromptFor(entry) {
   const analysis = entry?.analysis || {};
   const json = analysis.jsonPrompt || {};
   const raw = json.raw && typeof json.raw === "object" ? json.raw : {
+    image_type: json.imageType,
+    source_guess: json.sourceGuess,
+    source_confidence: json.sourceConfidence,
+    source_evidence: json.sourceEvidence,
+    prompt_strategy: json.promptStrategy,
     subject: json.subject,
     action_pose: json.actionPose,
     details_appearance: json.detailsAppearance,

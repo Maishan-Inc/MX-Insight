@@ -61,6 +61,11 @@ The JSON schema:
   "en_style_tags": ["english tag 1", "english tag 2", "english tag 3", "english tag 4"],
   "ja_style_tags": ["日本語タグ1", "日本語タグ2", "日本語タグ3", "日本語タグ4"],
   "json_prompt": {
+    "image_type": "One of anime_illustration, game_screenshot, real_photo, ai_art, design_poster, 3d_render, or unknown.",
+    "source_guess": "A cautious source/type guess such as anime-style key visual, mobile game splash art, cinematic game screenshot, studio portrait, product render, or poster layout. Do not claim a specific IP, franchise, character, studio or game title unless the image clearly proves it.",
+    "source_confidence": 0.0,
+    "source_evidence": ["visible clue 1", "visible clue 2", "visible clue 3"],
+    "prompt_strategy": "The type-specific strategy used to write the final prompts.",
     "subject": "Main subject with count, type, scale, identity category and the most visually important attributes.",
     "action_pose": "Action, pose, gesture, gaze, orientation, body language or object placement.",
     "details_appearance": "Specific visible details, clothing, anatomy, props, accessories, markings, silhouette, condition or design cues.",
@@ -93,6 +98,24 @@ Rules:
 - Describe visible foreground, midground and background relationships when present.
 - Capture subject count, identity category, pose, gesture, gaze, expression, clothing or object design, materials, textures, surface finish, weathering, and small distinctive details.
 - For magazine, poster or ad layouts, always describe masthead/title text, main title position, side/bottom small text, barcode/price/date blocks, subject-to-title overlap, subject scale, background layers, clothing material, makeup/hair, lighting and color system when visible.
+- First classify the image inside json_prompt.image_type before writing the final prompt. Use this classification to choose the correct prompt strategy.
+- Supported image_type values:
+  - anime_illustration: anime illustration, manga/anime key visual, cel-shaded character art, visual novel or anime screenshot style.
+  - game_screenshot: game screenshot, 3D game character, game environment, game UI/HUD, splash art with game-asset language.
+  - real_photo: real photography, portrait, product photo, documentary or lifestyle image.
+  - ai_art: visibly AI-generated illustration/concept art that is not better described by another category.
+  - design_poster: poster, magazine cover, advertising layout, ecommerce banner or typography-led graphic.
+  - 3d_render: CG render, toy/figurine render, product render, stylized 3D model or scene.
+  - unknown: use only when the visible evidence is too ambiguous.
+- For anime_illustration, emphasize character design, hair shape and color, eye design, expression, outfit construction, accessories, line art, cel shading, painterly finish, background layers, key visual composition and anime-specific lighting. Do not force real-camera language.
+- For game_screenshot, emphasize character/creature/vehicle design, weapons or props, environment assets, HUD/UI when visible, real-time rendering, PBR materials, engine-like lighting, camera perspective, depth of field, motion blur and gameplay/splash-art framing.
+- For real_photo, emphasize photographic subject, real materials, lens feel, shot distance, natural or studio light, depth of field, skin/cloth/product texture and believable environment.
+- For ai_art, emphasize the visible generated-image style, composition, surface finish, lighting, palette and model-friendly visual modifiers without relying on generic filler.
+- For design_poster, prioritize layout, typography, text blocks, hierarchy, grids, logo/title placement, subject-to-text overlap, margins, barcode/date/price blocks and graphic design system.
+- For 3d_render, emphasize geometry, shader/material behavior, render lighting, model scale, camera angle, surface finish, ambient occlusion, reflections and CG/post-processing cues.
+- json_prompt.source_guess may name broad categories or possible source types. Only name a specific franchise, character, game or anime when clearly visible from reliable on-image evidence. Keep uncertain names out of recreation_prompt.
+- json_prompt.source_evidence must list concrete visible clues that justify image_type and source_guess.
+- recreation_prompt and prompt_core must follow json_prompt.prompt_strategy and should not include low-confidence source guesses as facts.
 - Capture lighting direction, shadow softness, contrast, color temperature, atmosphere, depth, lens feel, camera angle, shot distance, crop, focal emphasis, and aspect ratio.
 - If the image is simple, expand on spatial placement, proportions, edges, textures, lighting, palette, and finish instead of inventing new objects.
 - Return exactly 4 concise style tags in each language.
@@ -137,6 +160,11 @@ const RESPONSE_SCHEMA = {
     json_prompt: {
       type: "object",
       properties: {
+        image_type: { type: "string" },
+        source_guess: { type: "string" },
+        source_confidence: { type: "number" },
+        source_evidence: { type: "array", items: { type: "string" } },
+        prompt_strategy: { type: "string" },
         subject: { type: "string" },
         action_pose: { type: "string" },
         details_appearance: { type: "string" },
@@ -152,6 +180,11 @@ const RESPONSE_SCHEMA = {
       },
       additionalProperties: true,
       required: [
+        "image_type",
+        "source_guess",
+        "source_confidence",
+        "source_evidence",
+        "prompt_strategy",
         "subject",
         "action_pose",
         "details_appearance",
@@ -338,7 +371,16 @@ function arrayFrom(value, ...keys) {
 function parseJsonPrompt(value) {
   const source = typeof value === "object" && value !== null ? value : {};
   const raw = plainObject(source);
+  const sourceConfidence = source.source_confidence ?? source.sourceConfidence;
+  const confidence = typeof sourceConfidence === "number" && Number.isFinite(sourceConfidence)
+    ? Math.min(1, Math.max(0, sourceConfidence))
+    : void 0;
   return {
+    imageType: firstString(source, "image_type", "imageType"),
+    sourceGuess: firstString(source, "source_guess", "sourceGuess"),
+    sourceConfidence: confidence,
+    sourceEvidence: arrayFrom(source, "source_evidence", "sourceEvidence"),
+    promptStrategy: firstString(source, "prompt_strategy", "promptStrategy"),
     subject: firstString(source, "subject"),
     actionPose: firstString(source, "action_pose", "actionPose"),
     detailsAppearance: firstString(source, "details_appearance", "detailsAppearance"),
