@@ -26,6 +26,19 @@ The existing spec `2026-06-07-record-delete-popup-theme-design.md` explicitly av
 
 Use a small shared theme state stored in `chrome.storage.local`.
 
+### Theme Palette Revision
+
+The final visual direction is neutral black and white, not a green-accented brand theme.
+
+The `MX-Insight-Web` reference is used for the dot-grid background pattern only. Do not carry over its green or dark navy brand accents into the extension theme.
+
+Theme color direction:
+
+- Light mode: white or near-white background, black primary text, gray borders, black primary actions.
+- Dark mode: black or near-black background, white primary text, dark gray surfaces, white primary actions.
+- Dot-grid background: gray dots only.
+- Success and enabled indicators use neutral black/white styling; destructive/error states may keep restrained red for readability.
+
 ### Theme State
 
 Add `themeMode` to the local settings keys used by popup and options.
